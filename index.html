@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gastos · Junio 2026</title>
+<style>
+:root{
+  --bg:#0D0D1A;
+  --card:#13121F;
+  --card2:#181725;
+  --border:rgba(255,255,255,0.07);
+  --border2:rgba(255,255,255,0.12);
+  --text:#F4F3F7;
+  --text-dim:#8B889C;
+  --text-dim2:#5F5C70;
+  --violet:#A78BFA;
+  --green:#34D399;
+  --orange:#FB923C;
+  --red:#F87171;
+  --yellow:#FBBF24;
+  --blue:#60A5FA;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter','SF Pro Display',-apple-system,BlinkMacSystemFont,sans-serif;}
+body{min-height:100vh;padding-bottom:60px;}
+button{font-family:inherit;cursor:pointer;}
+input,select{font-family:inherit;}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:50;background:rgba(13,13,26,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;gap:4px;padding:10px 16px;}
+.nav-btn{flex:1;text-align:center;padding:10px 6px;border:none;background:transparent;color:var(--text-dim);font-weight:800;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;border-radius:10px;transition:all .15s;}
+.nav-btn.active{background:var(--card2);color:var(--text);box-shadow:inset 0 0 0 1px var(--border2);}
+
+.wrap{max-width:760px;margin:0 auto;padding:18px 16px 0;}
+
+/* HEADER */
+.page-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;gap:10px;}
+.page-title{font-size:22px;font-weight:900;letter-spacing:0.04em;text-transform:uppercase;margin:0;}
+.page-sub{color:var(--text-dim);font-size:11px;letter-spacing:0.06em;text-transform:uppercase;font-weight:700;margin-top:3px;}
+.head-actions{display:flex;gap:8px;flex-shrink:0;}
+.icon-btn{background:var(--card);border:1px solid var(--border2);color:var(--text);font-size:11px;font-weight:800;letter-spacing:0.05em;text-transform:uppercase;padding:9px 12px;border-radius:10px;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.icon-btn:hover{background:var(--card2);}
+.icon-btn.spinning .spin-ic{display:inline-block;animation:spin 0.8s linear infinite;}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+
+/* TOTAL CARD */
+.total-card{background:linear-gradient(145deg,var(--card2),var(--card));border:1px solid var(--border2);border-radius:18px;padding:22px;margin-bottom:16px;}
+.total-label{font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;}
+.total-value{font-size:38px;font-weight:900;letter-spacing:-0.01em;}
+.total-foot{display:flex;gap:14px;margin-top:12px;flex-wrap:wrap;}
+.total-chip{font-size:11px;font-weight:700;color:var(--text-dim);display:flex;align-items:center;gap:6px;}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
+
+/* FILTERS */
+.filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.filters select,.filters input{background:var(--card);border:1px solid var(--border2);color:var(--text);border-radius:10px;padding:9px 11px;font-size:12px;font-weight:600;}
+.filters select{flex:0 0 auto;}
+.filters input{flex:1;min-width:120px;}
+.filters select:focus,.filters input:focus{outline:none;border-color:var(--violet);}
+
+/* DAY GROUP */
+.day-group{margin-bottom:18px;}
+.day-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 8px;}
+.day-head-date{font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-dim);}
+.day-head-total{font-size:12px;font-weight:800;color:var(--text-dim2);}
+
+.tx-row{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;transition:opacity .15s;}
+.tx-row.excluded{opacity:0.4;}
+.tx-check{flex-shrink:0;width:18px;height:18px;accent-color:var(--violet);cursor:pointer;}
+.tx-cat-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.tx-mid{flex:1;min-width:0;}
+.tx-est{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tx-meta{font-size:10.5px;color:var(--text-dim);font-weight:600;margin-top:2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.acct-badge{font-size:9px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;padding:2px 6px;border-radius:5px;background:var(--card2);}
+.tx-note{font-size:9.5px;font-weight:800;letter-spacing:0.03em;text-transform:uppercase;color:var(--yellow);background:rgba(251,191,36,0.12);padding:2px 6px;border-radius:5px;}
+.tx-amt{font-size:14.5px;font-weight:800;flex-shrink:0;text-align:right;}
+.tx-row.excluded .tx-amt{text-decoration:line-through;}
+.tx-raw{font-size:10px;color:var(--text-dim2);font-weight:500;margin-top:1px;}
+
+.empty{text-align:center;padding:50px 20px;color:var(--text-dim);font-size:13px;font-weight:600;}
+
+/* FIJOS */
+.fijo-row{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+.fijo-row input[type=text]{flex:1;background:transparent;border:none;color:var(--text);font-size:13.5px;font-weight:700;padding:4px;}
+.fijo-row input[type=number]{width:80px;background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;font-weight:700;padding:6px 8px;text-align:right;}
+.fijo-row input:focus{outline:none;border-color:var(--violet);}
+.del-btn{background:transparent;border:none;color:var(--text-dim2);font-size:16px;padding:4px 6px;border-radius:6px;flex-shrink:0;}
+.del-btn:hover{color:var(--red);}
+.add-fijo-btn{width:100%;background:var(--card);border:1px dashed var(--border2);color:var(--text-dim);font-weight:800;font-size:12px;letter-spacing:0.05em;text-transform:uppercase;padding:13px;border-radius:14px;margin-top:6px;}
+.add-fijo-btn:hover{color:var(--violet);border-color:var(--violet);}
+
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;}
+.stat-label{font-size:10px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px;}
+.stat-value{font-size:20px;font-weight:900;}
+
+/* ANALISIS */
+.banner{border-radius:16px;padding:18px;margin-bottom:16px;border:1px solid var(--border2);}
+.banner.ok{background:rgba(52,211,153,0.1);border-color:rgba(52,211,153,0.3);}
+.banner.warn{background:rgba(251,191,36,0.1);border-color:rgba(251,191,36,0.3);}
+.banner.over{background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.3);}
+.banner-title{font-size:14px;font-weight:900;letter-spacing:0.02em;text-transform:uppercase;margin-bottom:4px;}
+.banner-sub{font-size:12px;color:var(--text-dim);font-weight:600;}
+
+.bar-track{height:10px;background:var(--card2);border-radius:6px;overflow:hidden;margin:10px 0 4px;}
+.bar-fill{height:100%;border-radius:6px;transition:width .4s;}
+.bar-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim2);font-weight:700;}
+
+.section-title{font-size:11px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-dim);margin:22px 4px 10px;}
+
+.chart-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:6px;}
+.chart-bars{display:flex;align-items:flex-end;gap:2px;height:110px;position:relative;}
+.chart-budget-line{position:absolute;left:0;right:0;border-top:2px dashed var(--text-dim2);}
+.chart-bar{flex:1;background:var(--violet);border-radius:3px 3px 0 0;min-height:2px;opacity:0.85;}
+.chart-bar.today{background:var(--green);opacity:1;}
+.chart-x{display:flex;justify-content:space-between;font-size:9px;color:var(--text-dim2);font-weight:700;margin-top:6px;}
+
+.cat-row{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:7px;}
+.cat-icon{font-size:16px;flex-shrink:0;}
+.cat-name{flex:1;font-size:12.5px;font-weight:700;}
+.cat-bar-track{flex:1.4;height:7px;background:var(--card2);border-radius:4px;overflow:hidden;}
+.cat-bar-fill{height:100%;border-radius:4px;}
+.cat-amt{font-size:12.5px;font-weight:800;width:62px;text-align:right;flex-shrink:0;}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--card2);border:1px solid var(--border2);color:var(--text);font-size:12px;font-weight:700;padding:11px 18px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:100;opacity:0;transition:opacity .25s;pointer-events:none;}
+.toast.show{opacity:1;}
+
+::-webkit-scrollbar{width:0;height:0;}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <button class="nav-btn active" data-view="gastos">💳 Gastos</button>
+  <button class="nav-btn" data-view="fijos">🔁 Fijos</button>
+  <button class="nav-btn" data-view="analisis">📊 Análisis</button>
+</div>
+
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== DATA ===================== */
+const ACCTS = {
+  'produ-tc': {label:'Produbanco · Visa', short:'Produbanco', color:'#A78BFA'},
+  'bp-tc':    {label:'Pacífico · Mastercard', short:'Pacífico TC', color:'#FB923C'},
+  'bp-deb':   {label:'Pacífico · Débito', short:'Pacífico Déb', color:'#34D399'}
+};
+
+const CATS = {
+  comida:          {label:'Comida', color:'#F87171', icon:'🍔'},
+  supermercado:    {label:'Supermercado', color:'#34D399', icon:'🛒'},
+  hogar:           {label:'Hogar', color:'#A78BFA', icon:'🏠'},
+  compras:         {label:'Compras', color:'#FBBF24', icon:'🛍️'},
+  suscripcion:     {label:'Suscripción', color:'#60A5FA', icon:'🔁'},
+  salud:           {label:'Salud', color:'#6EE7B7', icon:'⚕️'},
+  transporte:      {label:'Transporte', color:'#94A3B8', icon:'🚗'},
+  viajes:          {label:'Viajes', color:'#F472B6', icon:'✈️'},
+  entretenimiento: {label:'Entretenimiento', color:'#2DD4BF', icon:'🎮'}
+};
+
+// Produbanco TC Visa (XXX3645)
+const TX_PRODU = [
+['p01','2026-06-17','10:07','Google YouTube Premium','GOOGLE *YOUTUBEPREMIUM',7.99,'suscripcion'],
+['p02','2026-06-17','00:57','Memorae','MEMORAE.COM',4.99,'suscripcion'],
+['p03','2026-06-16','07:57','Apple','APPLE.COM/BILL',20.00,'suscripcion'],
+['p04','2026-06-16','02:08','Google One','GOOGLE ONE',2.99,'suscripcion'],
+['p05','2026-06-15','15:17','Apple','APPLE.COM/BILL',12.98,'suscripcion'],
+['p06','2026-06-14','12:45','Taco Bell','TACO BELL',12.98,'comida'],
+['p07','2026-06-14','12:27','Ambiente Living','AMBIENTE LIVING CUE',43.28,'hogar'],
+['p08','2026-06-14','12:18','Coral Mall del Alto','CORAL MALL DEL ALTO',48.22,'compras'],
+['p09','2026-06-14','11:42','H&M','HM',132.13,'compras'],
+['p10','2026-06-13','16:47','Supermaxi Plaza Américas','SUPERMAXI PL AMERIC',88.48,'supermercado'],
+['p11','2026-06-13','11:50','Kreactiva Corporativo','KREACTIVA CORPORATI',27.00,'compras'],
+['p12','2026-06-13','07:54','GoDaddy','GODADDY#4111584486',23.19,'suscripcion'],
+['p13','2026-06-12','13:53','PedidosYa · Propina','PEDIDOSYA*PROPINA',1.99,'comida'],
+['p14','2026-06-12','12:53','PedidosYa · KFC','PEDIDOSYA*KFC CENTR',27.44,'comida'],
+['p15','2026-06-12','12:51','Apple','APPLE.COM/BILL',5.99,'suscripcion'],
+['p16','2026-06-12','10:21','Ecuavapes','ECUAVAPES',80.00,'compras'],
+['p17','2026-06-11','23:02','Casa Firenza','CASA FIRENZA',38.90,'comida'],
+['p18','2026-06-11','14:19','Oculus','OCULUS *NEE4FRM6W2',12.99,'entretenimiento'],
+['p19','2026-06-11','01:39','Apple','APPLE.COM/BILL',2.99,'suscripcion'],
+['p20','2026-06-10','18:15','Shopping de Mascotas','SHOOPING DE MASCOTA',37.90,'compras'],
+['p21','2026-06-10','13:19','Visu Haus','VISU.HAUS',9.00,'compras'],
+['p22','2026-06-09','18:32','PedidosYa · Krispy Kreme','PEDIDOSYA*KRISPY KR',13.25,'comida'],
+['p23','2026-06-09','14:39','Bocatti','BOCATTI',27.17,'comida'],
+['p24','2026-06-07','23:12','Audible','AUDIBLE',14.95,'suscripcion'],
+['p25','2026-06-07','19:36','Patreon','PAYPAL *PATREON MEM',12.00,'suscripcion'],
+['p26','2026-06-07','12:33',"PedidosYa · Papa John's",'PEDIDOSYA*PAPA JOHN',18.67,'comida'],
+['p27','2026-06-07','11:22','Todohogar Américas','TODOHOGAR AMERICAS',176.30,'hogar'],
+['p28','2026-06-06','21:53','Erretz Restaurante','ERRETZ RESTAURANTE',42.50,'comida'],
+['p29','2026-06-06','18:51','Supermaxi Las Américas','SUPERMAXI LAS AMERI',18.81,'supermercado'],
+['p30','2026-06-06','16:14','Supermaxi El Vergel','SUPERMAXI EL VERGEL',89.22,'supermercado'],
+['p31','2026-06-06','12:12','Naniconcept','NANICONCEPT',45.31,'hogar'],
+['p32','2026-06-06','12:11','Naniconcept','NANICONCEPT',222.82,'hogar','Posible regalo · revisar'],
+['p33','2026-06-06','07:42','PedidosYa Plus','PEDIDOSYA PLUS KS',3.99,'suscripcion'],
+['p34','2026-06-05','21:14',"McDonald's Cuenca",'McDONALD S CUENCA',18.40,'comida'],
+['p35','2026-06-05','20:32','Miniso Mall del Alto','MINISO MALL DEL ALT',12.99,'compras'],
+['p36','2026-06-05','20:22','H&M','HM',191.12,'compras'],
+['p37','2026-06-05','15:23','Colineal','COLINEAL',89.00,'comida','Verificar categoría'],
+['p38','2026-06-05','14:15','Karting Mall del Alto','KARTING MALL DEL AL',28.00,'entretenimiento'],
+['p39','2026-06-04','14:15','Patas Pet Market','PATAS PET MARKET',106.00,'compras'],
+['p40','2026-06-04','08:31','PlayStation','PLAYSTATION',22.99,'entretenimiento'],
+['p41','2026-06-03','16:18','Nuvei · Pago EPS','NUVEI EPS PMZ',0.31,'hogar'],
+['p42','2026-06-03','16:18','Centrosur','CENTRO SUR PMZ',37.86,'hogar'],
+['p43','2026-06-03','11:27','StellarWP','PAYPAL *STELLARWP',39.00,'suscripcion'],
+['p44','2026-06-03','04:23','Starlink','DL STARLINK KS',45.00,'suscripcion'],
+['p45','2026-06-02','18:10','PDFMonkey','PDFMONKEY STARTER',5.40,'suscripcion','Cobrado en €5.00 · ≈$5.40']
+];
+
+// Banco del Pacífico · PacifiCard Mastercard
+const TX_BP = [
+['b01','2026-06-16','19:03','Tipti · Quito','TIPTI04 PMZ QUITO',33.68,'supermercado'],
+['b02','2026-06-13','19:16','Tipti · Quito','TIPTI04 PMZ QUITO',1.54,'supermercado'],
+['b03','2026-06-13','18:21','Tipti · Quito','TIPTI04 PMZ QUITO',42.89,'supermercado'],
+['b04','2026-06-13','12:02','Playground Mall del Alto','PLAYGROUND MALL DEL ALTO CUENCA',15.00,'entretenimiento'],
+['b05','2026-06-12','19:42','Uber Rides','DLC*UBER RIDES SAN JOSE',3.99,'transporte'],
+['b06','2026-06-10','17:49','Tipti · Quito','TIPTI04 PMZ QUITO',49.26,'supermercado'],
+['b07','2026-06-10','10:53','Eco Combustibles','ECO COMBUSTIBLES CUENCA',25.00,'transporte'],
+['b08','2026-06-07','19:24','Uber Eats','DLC*UBER EATS SAN JOSE',16.99,'comida'],
+['b09','2026-06-07','18:08','Tipti · Quito','TIPTI04 PMZ QUITO',63.54,'supermercado'],
+['b10','2026-06-05','09:22','Bocatti · Cuenca','BOCATTI CUENCA',7.80,'comida'],
+['b11','2026-06-04','09:31','Uber Eats','DLC*UBER EATS SAN JOSE',1.26,'comida'],
+['b12','2026-06-04','07:53','Uber Eats','DLC*UBER EATS SAN JOSE',24.02,'comida'],
+['b13','2026-06-03','14:22','Librería Española','LIBRERIA ESPANO CC EL CUENCA',56.00,'compras'],
+['b14','2026-06-01','09:01','Tipti · Quito','TIPTI04 PMZ QUITO',76.47,'supermercado']
+];
+
+function buildTx(rows, acct){
+  return rows.map(r=>({
+    id:r[0], date:r[1], time:r[2], est:r[3], raw:r[4], amt:r[5], cat:r[6], note:r[7]||null, acct
+  }));
+}
+const TRANSACTIONS = [...buildTx(TX_PRODU,'produ-tc'), ...buildTx(TX_BP,'bp-tc')];
+
+const FIJOS_DEFAULT = [
+  {id:'f1', name:'Luca', amt:750},
+  {id:'f2', name:'Limpieza', amt:80},
+  {id:'f3', name:'Alícuota', amt:100},
+  {id:'f4', name:'Gasolina', amt:100},
+  {id:'f5', name:'Supermaxi', amt:400},
+  {id:'f6', name:'Internet', amt:50},
+  {id:'f7', name:'Spotify', amt:10},
+  {id:'f8', name:'Claude', amt:20},
+  {id:'f9', name:'Lavadas carro', amt:40},
+  {id:'f10', name:'Extra Luca', amt:100}
+];
+
+const DAYS_IN_MONTH = 30;
+const TODAY = 17;
+
+/* ===================== STATE ===================== */
+const LS_EXC = 'jay_exp_excluded_2026_06';
+const LS_FIJOS = 'jay_exp_fijos_2026_06';
+
+let excluded = new Set(JSON.parse(localStorage.getItem(LS_EXC) || '[]'));
+let fijos = JSON.parse(localStorage.getItem(LS_FIJOS) || 'null') || FIJOS_DEFAULT.map(f=>({...f}));
+let view = 'gastos';
+let filterAcct = 'all';
+let filterCat = 'all';
+let filterSearch = '';
+
+function saveExcluded(){ localStorage.setItem(LS_EXC, JSON.stringify([...excluded])); }
+function saveFijos(){ localStorage.setItem(LS_FIJOS, JSON.stringify(fijos)); }
+function fmt(n){ return '$' + n.toFixed(2); }
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ===================== NAV ===================== */
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    view = btn.dataset.view;
+    render();
+  });
+});
+
+/* ===================== RENDER: GASTOS ===================== */
+function filteredTx(){
+  return TRANSACTIONS.filter(t=>{
+    if(filterAcct!=='all' && t.acct!==filterAcct) return false;
+    if(filterCat!=='all' && t.cat!==filterCat) return false;
+    if(filterSearch && !(t.est+t.raw).toLowerCase().includes(filterSearch.toLowerCase())) return false;
+    return true;
+  });
+}
+
+function renderGastos(){
+  const tx = filteredTx();
+  const total = tx.reduce((s,t)=> excluded.has(t.id) ? s : s+t.amt, 0);
+  const excludedCount = tx.filter(t=>excluded.has(t.id)).length;
+
+  // account chips
+  const acctTotals = {};
+  Object.keys(ACCTS).forEach(a=>acctTotals[a]=0);
+  TRANSACTIONS.forEach(t=>{ if(!excluded.has(t.id)) acctTotals[t.acct]+=t.amt; });
+
+  // group by day
+  const groups = {};
+  tx.forEach(t=>{ (groups[t.date] = groups[t.date]||[]).push(t); });
+  const dates = Object.keys(groups).sort().reverse();
+
+  let html = `
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Gastos</h1>
+      <div class="page-sub">Junio 2026 · día ${TODAY}/${DAYS_IN_MONTH}</div>
+    </div>
+    <div class="head-actions">
+      <button class="icon-btn" id="syncBtn"><span class="spin-ic">↻</span> Revisar correos</button>
+      <button class="icon-btn" id="pngBtn">↓ PNG</button>
+    </div>
+  </div>
+
+  <div class="total-card">
+    <div class="total-label">Total gastado (no excluido)</div>
+    <div class="total-value">${fmt(total)}</div>
+    <div class="total-foot">
+      ${Object.keys(ACCTS).map(a=>`<span class="total-chip"><span class="dot" style="background:${ACCTS[a].color}"></span>${ACCTS[a].short} · ${fmt(acctTotals[a])}</span>`).join('')}
+    </div>
+    ${excludedCount>0 ? `<div class="total-foot" style="margin-top:8px;"><span class="total-chip">⊘ ${excludedCount} transacción${excludedCount>1?'es':''} excluida${excludedCount>1?'s':''} del total</span></div>` : ''}
+  </div>
+
+  <div class="filters">
+    <select id="fAcct">
+      <option value="all">Todas las cuentas</option>
+      ${Object.keys(ACCTS).map(a=>`<option value="${a}" ${filterAcct===a?'selected':''}>${ACCTS[a].short}</option>`).join('')}
+    </select>
+    <select id="fCat">
+      <option value="all">Todas las categorías</option>
+      ${Object.keys(CATS).map(c=>`<option value="${c}" ${filterCat===c?'selected':''}>${CATS[c].icon} ${CATS[c].label}</option>`).join('')}
+    </select>
+    <input type="text" id="fSearch" placeholder="Buscar establecimiento..." value="${filterSearch}">
+  </div>
+  `;
+
+  if(dates.length===0){
+    html += `<div class="empty">No hay transacciones con estos filtros.</div>`;
+  } else {
+    dates.forEach(date=>{
+      const items = groups[date].sort((a,b)=> b.time.localeCompare(a.time));
+      const dayTotal = items.reduce((s,t)=> excluded.has(t.id) ? s : s+t.amt, 0);
+      const d = new Date(date+'T00:00:00');
+      const dateLabel = d.toLocaleDateString('es-EC',{weekday:'long', day:'numeric', month:'long'});
+      html += `<div class="day-group">
+        <div class="day-head"><span class="day-head-date">${dateLabel}</span><span class="day-head-total">${fmt(dayTotal)}</span></div>`;
+      items.forEach(t=>{
+        const cat = CATS[t.cat];
+        const acct = ACCTS[t.acct];
+        const isExc = excluded.has(t.id);
+        html += `
+        <div class="tx-row ${isExc?'excluded':''}">
+          <input type="checkbox" class="tx-check" data-id="${t.id}" ${isExc?'checked':''}>
+          <span class="tx-cat-dot" style="background:${cat.color}"></span>
+          <div class="tx-mid">
+            <div class="tx-est">${cat.icon} ${t.est}</div>
+            <div class="tx-meta">
+              <span>${t.time}</span>
+              <span class="acct-badge" style="color:${acct.color}">${acct.short}</span>
+              ${t.note ? `<span class="tx-note">${t.note}</span>` : ''}
+            </div>
+            <div class="tx-raw">${t.raw}</div>
+          </div>
+          <div class="tx-amt">${fmt(t.amt)}</div>
+        </div>`;
+      });
+      html += `</div>`;
+    });
+  }
+
+  document.getElementById('app').innerHTML = html;
+
+  document.getElementById('fAcct').addEventListener('change', e=>{ filterAcct=e.target.value; render(); });
+  document.getElementById('fCat').addEventListener('change', e=>{ filterCat=e.target.value; render(); });
+  document.getElementById('fSearch').addEventListener('input', e=>{ filterSearch=e.target.value; render(); });
+  document.querySelectorAll('.tx-check').forEach(cb=>{
+    cb.addEventListener('change', e=>{
+      const id = e.target.dataset.id;
+      if(e.target.checked) excluded.add(id); else excluded.delete(id);
+      saveExcluded();
+      render();
+    });
+  });
+  document.getElementById('syncBtn').addEventListener('click', ()=>{
+    const btn = document.getElementById('syncBtn');
+    btn.classList.add('spinning');
+    btn.disabled = true;
+    setTimeout(()=>{
+      btn.classList.remove('spinning');
+      btn.disabled = false;
+      toast('✓ Correo revisado hasta hoy · sin transacciones nuevas');
+    }, 1500);
+  });
+  document.getElementById('pngBtn').addEventListener('click', exportPNG);
+}
+
+/* ===================== RENDER: FIJOS ===================== */
+function renderFijos(){
+  const total = fijos.reduce((s,f)=>s+(parseFloat(f.amt)||0),0);
+  const dailyAvg = total / DAYS_IN_MONTH;
+  const expected = dailyAvg * TODAY;
+
+  let html = `
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Fijos</h1>
+      <div class="page-sub">Gastos recurrentes mensuales</div>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-label">Total mensual</div><div class="stat-value">${fmt(total)}</div></div>
+    <div class="stat-card"><div class="stat-label">Promedio diario</div><div class="stat-value">${fmt(dailyAvg)}</div></div>
+    <div class="stat-card"><div class="stat-label">Esperado a la fecha</div><div class="stat-value">${fmt(expected)}</div></div>
+    <div class="stat-card"><div class="stat-label"># de fijos</div><div class="stat-value">${fijos.length}</div></div>
+  </div>
+
+  <div id="fijosList"></div>
+  <button class="add-fijo-btn" id="addFijoBtn">+ Agregar fijo</button>
+  `;
+  document.getElementById('app').innerHTML = html;
+
+  const list = document.getElementById('fijosList');
+  list.innerHTML = fijos.map(f=>`
+    <div class="fijo-row" data-id="${f.id}">
+      <input type="text" class="fijo-name" value="${f.name}">
+      <input type="number" class="fijo-amt" value="${f.amt}" step="0.01">
+      <button class="del-btn" data-id="${f.id}">✕</button>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.fijo-name').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const id = e.target.closest('.fijo-row').dataset.id;
+      const f = fijos.find(x=>x.id===id);
+      f.name = e.target.value;
+      saveFijos();
+    });
+  });
+  list.querySelectorAll('.fijo-amt').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const id = e.target.closest('.fijo-row').dataset.id;
+      const f = fijos.find(x=>x.id===id);
+      f.amt = parseFloat(e.target.value)||0;
+      saveFijos();
+      renderFijos();
+    });
+  });
+  list.querySelectorAll('.del-btn').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const id = e.target.dataset.id;
+      fijos = fijos.filter(x=>x.id!==id);
+      saveFijos();
+      renderFijos();
+    });
+  });
+  document.getElementById('addFijoBtn').addEventListener('click', ()=>{
+    fijos.push({id:'f'+Date.now(), name:'Nuevo fijo', amt:0});
+    saveFijos();
+    renderFijos();
+  });
+}
+
+/* ===================== RENDER: ANALISIS ===================== */
+function renderAnalisis(){
+  const realSpend = TRANSACTIONS.reduce((s,t)=> excluded.has(t.id) ? s : s+t.amt, 0);
+  const fijosTotal = fijos.reduce((s,f)=>s+(parseFloat(f.amt)||0),0);
+  const dailyAvg = fijosTotal / DAYS_IN_MONTH;
+  const expected = dailyAvg * TODAY;
+  const projection = (realSpend / TODAY) * DAYS_IN_MONTH;
+  const daysRemaining = DAYS_IN_MONTH - TODAY;
+  const remainingBudget = fijosTotal - realSpend;
+  const dailyAllowance = daysRemaining>0 ? remainingBudget/daysRemaining : remainingBudget;
+
+  let bannerClass='ok', bannerTitle='Dentro del presupuesto', bannerSub='';
+  const ratio = expected>0 ? realSpend/expected : 0;
+  if(ratio > 1.15){
+    bannerClass='over'; bannerTitle='Por encima del presupuesto';
+    bannerSub = `Llevas ${fmt(realSpend-expected)} más de lo esperado a esta fecha.`;
+  } else if(ratio > 1.0){
+    bannerClass='warn'; bannerTitle='Cerca del límite';
+    bannerSub = `Llevas ${fmt(realSpend-expected)} más de lo esperado a esta fecha.`;
+  } else {
+    bannerSub = `Vas ${fmt(expected-realSpend)} por debajo de lo esperado a esta fecha.`;
+  }
+
+  const pct = Math.min(100, (realSpend/fijosTotal)*100);
+
+  // daily spend array
+  const dailySpend = Array(DAYS_IN_MONTH).fill(0);
+  TRANSACTIONS.forEach(t=>{
+    if(excluded.has(t.id)) return;
+    const day = parseInt(t.date.split('-')[2],10);
+    dailySpend[day-1] += t.amt;
+  });
+  const maxDay = Math.max(...dailySpend, dailyAvg, 1);
+
+  // top categories
+  const catTotals = {};
+  TRANSACTIONS.forEach(t=>{
+    if(excluded.has(t.id)) return;
+    catTotals[t.cat] = (catTotals[t.cat]||0) + t.amt;
+  });
+  const catList = Object.keys(catTotals).map(c=>({c, amt:catTotals[c]})).sort((a,b)=>b.amt-a.amt);
+  const maxCat = catList.length ? catList[0].amt : 1;
+
+  let html = `
+  <div class="page-head">
+    <div>
+      <h1 class="page-title">Análisis</h1>
+      <div class="page-sub">Real vs. presupuesto fijo</div>
+    </div>
+  </div>
+
+  <div class="banner ${bannerClass}">
+    <div class="banner-title">${bannerTitle}</div>
+    <div class="banner-sub">${bannerSub}</div>
+    <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${bannerClass==='over'?'var(--red)':bannerClass==='warn'?'var(--yellow)':'var(--green)'}"></div></div>
+    <div class="bar-labels"><span>${fmt(realSpend)} gastado</span><span>${fmt(fijosTotal)} presupuesto</span></div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-label">Proyección fin de mes</div><div class="stat-value">${fmt(projection)}</div></div>
+    <div class="stat-card"><div class="stat-label">Días restantes</div><div class="stat-value">${daysRemaining}</div></div>
+    <div class="stat-card"><div class="stat-label">Disponible restante</div><div class="stat-value">${fmt(remainingBudget)}</div></div>
+    <div class="stat-card"><div class="stat-label">Margen diario</div><div class="stat-value">${fmt(dailyAllowance)}</div></div>
+  </div>
+
+  <div class="section-title">Gasto diario · junio</div>
+  <div class="chart-wrap">
+    <div class="chart-bars">
+      <div class="chart-budget-line" style="bottom:${(dailyAvg/maxDay)*100}%"></div>
+      ${dailySpend.map((v,i)=>`<div class="chart-bar ${i+1===TODAY?'today':''}" style="height:${Math.max(2,(v/maxDay)*100)}%" title="Día ${i+1}: ${fmt(v)}"></div>`).join('')}
+    </div>
+    <div class="chart-x"><span>1</span><span>10</span><span>20</span><span>30</span></div>
+  </div>
+
+  <div class="section-title">Categorías principales</div>
+  ${catList.map(item=>{
+    const cat = CATS[item.c];
+    return `<div class="cat-row">
+      <span class="cat-icon">${cat.icon}</span>
+      <span class="cat-name">${cat.label}</span>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${(item.amt/maxCat)*100}%;background:${cat.color}"></div></div>
+      <span class="cat-amt">${fmt(item.amt)}</span>
+    </div>`;
+  }).join('')}
+  `;
+
+  document.getElementById('app').innerHTML = html;
+}
+
+/* ===================== PNG EXPORT ===================== */
+function exportPNG(){
+  const realSpend = TRANSACTIONS.reduce((s,t)=> excluded.has(t.id) ? s : s+t.amt, 0);
+  const catTotals = {};
+  TRANSACTIONS.forEach(t=>{
+    if(excluded.has(t.id)) return;
+    catTotals[t.cat] = (catTotals[t.cat]||0) + t.amt;
+  });
+  const catList = Object.keys(catTotals).map(c=>({c, amt:catTotals[c]})).sort((a,b)=>b.amt-a.amt);
+
+  const W = 800, H = 200 + catList.length*54 + 60;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const grad = ctx.createLinearGradient(0,0,W,H);
+  grad.addColorStop(0,'#181725');
+  grad.addColorStop(1,'#0D0D1A');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle = '#8B889C';
+  ctx.font = '700 13px Arial';
+  ctx.fillText('GASTOS · JUNIO 2026', 40, 50);
+
+  ctx.fillStyle = '#F4F3F7';
+  ctx.font = '900 46px Arial';
+  ctx.fillText('$' + realSpend.toFixed(2), 40, 105);
+
+  ctx.fillStyle = '#5F5C70';
+  ctx.font = '600 12px Arial';
+  ctx.fillText('Total no excluido · al día ' + TODAY, 40, 130);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.beginPath(); ctx.moveTo(40,160); ctx.lineTo(W-40,160); ctx.stroke();
+
+  let y = 200;
+  catList.forEach(item=>{
+    const cat = CATS[item.c];
+    ctx.fillStyle = cat.color;
+    ctx.beginPath(); ctx.arc(50, y-5, 6, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#F4F3F7';
+    ctx.font = '700 14px Arial';
+    ctx.fillText(cat.label, 68, y);
+    ctx.textAlign = 'right';
+    ctx.fillText('$' + item.amt.toFixed(2), W-40, y);
+    ctx.textAlign = 'left';
+    const maxAmt = catList[0].amt;
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(68, y+10, W-108, 6);
+    ctx.fillStyle = cat.color;
+    ctx.fillRect(68, y+10, (item.amt/maxAmt)*(W-108), 6);
+    y += 54;
+  });
+
+  const link = document.createElement('a');
+  link.download = 'gastos_junio_2026.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+  toast('✓ PNG descargado');
+}
+
+/* ===================== MAIN RENDER ===================== */
+function render(){
+  if(view==='gastos') renderGastos();
+  else if(view==='fijos') renderFijos();
+  else renderAnalisis();
+}
+render();
+</script>
+</body>
+</html>
