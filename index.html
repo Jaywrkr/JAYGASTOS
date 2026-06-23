@@ -132,7 +132,7 @@ input,select{font-family:inherit;}
 <body>
 
 <div style="background:rgba(167,139,250,0.08);border-bottom:1px solid rgba(167,139,250,0.2);text-align:center;padding:6px 16px;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#A78BFA;">
-  ↻ Última actualización: 23 jun 2026, 16:00
+  ↻ Última actualización: 23 jun 2026, 17:30
 </div>
 <div class="nav">
   <button class="nav-btn active" data-view="gastos">💳 Gastos</button>
@@ -160,7 +160,9 @@ const CATS = {
   salud:           {label:'Salud', color:'#6EE7B7', icon:'⚕️'},
   transporte:      {label:'Transporte', color:'#94A3B8', icon:'🚗'},
   viajes:          {label:'Viajes', color:'#F472B6', icon:'✈️'},
-  entretenimiento: {label:'Entretenimiento', color:'#2DD4BF', icon:'🎮'}
+  entretenimiento: {label:'Entretenimiento', color:'#2DD4BF', icon:'🎮'},
+  efectivo:        {label:'Efectivo / Retiro', color:'#6B7280', icon:'💵'},
+  transferencia:   {label:'Transferencia', color:'#818CF8', icon:'↗️'}
 };
 
 // Produbanco TC Visa (XXX3645)
@@ -237,7 +239,25 @@ const TX_BP = [
 ['b11','2026-06-04','09:31','Uber Eats','DLC*UBER EATS SAN JOSE',1.26,'comida'],
 ['b12','2026-06-04','07:53','Uber Eats','DLC*UBER EATS SAN JOSE',24.02,'comida'],
 ['b13','2026-06-03','14:22','Librería Española','LIBRERIA ESPANO CC EL CUENCA',56.00,'compras'],
-['b14','2026-06-01','09:01','Tipti · Quito','TIPTI04 PMZ QUITO',76.47,'supermercado']
+['b14','2026-06-01','09:01','Tipti · Quito','TIPTI04 PMZ QUITO',76.47,'supermercado'],
+['b_ifttt','2026-06-15','08:00','IFTTT PRO+','IFTTT PRO+ SAN FRANCISCO',4.99,'suscripcion']
+];
+
+// Banco del Pacífico · Débito (XXX73)
+const TX_BPD = [
+['bd01','2026-06-22','16:24','Retiro Efectivo Móvil','RETIRO SIN TARJETA',200.00,'efectivo'],
+['bd06','2026-06-22','16:32','Apadel Club','TRANSFERENCIA APADEL CLUB',69.00,'entretenimiento'],
+['bd07','2026-06-15','11:04','Vasquez Castro Maria Veronica','TRANSFERENCIA VASQUEZ CASTRO',100.00,'hogar'],
+['bd02','2026-06-14','13:51','Retiro Efectivo Móvil','RETIRO SIN TARJETA',60.00,'efectivo'],
+['bd03','2026-06-11','10:49','Retiro Efectivo Móvil','RETIRO SIN TARJETA',100.00,'efectivo'],
+['bd04','2026-06-10','18:04','Retiro Efectivo Móvil','RETIRO SIN TARJETA',50.00,'efectivo'],
+['bd08','2026-06-10','12:02','Almacenes Chordeleg','TRANSFERENCIA CHORDELEG',655.00,'compras'],
+['bd09','2026-06-10','11:57','Luz Eléctrica','ELECTRICAS VARIAS',36.21,'hogar'],
+['bd10','2026-06-08','10:57','Jaramillo Palacios Eliana','TRANSFERENCIA JARAMILLO PALACIOS',195.00,'transferencia'],
+['bd11','2026-06-08','10:58','Sonia Palacios Sagbay','TRANSFERENCIA SONIA PALACIOS',100.00,'transferencia'],
+['bd05','2026-06-06','08:27','Retiro Efectivo Móvil','RETIRO SIN TARJETA',100.00,'efectivo'],
+['bd12','2026-06-03','10:53','Colineal','TRANSFERENCIA COLINEAL',208.83,'hogar'],
+['bd13','2026-06-03','11:10','Colineal','TRANSFERENCIA COLINEAL',1093.00,'hogar']
 ];
 
 function buildTx(rows, acct){
@@ -245,7 +265,7 @@ function buildTx(rows, acct){
     id:r[0], date:r[1], time:r[2], est:r[3], raw:r[4], amt:r[5], cat:r[6], note:r[7]||null, acct
   }));
 }
-const TRANSACTIONS = [...buildTx(TX_PRODU,'produ-tc'), ...buildTx(TX_BP,'bp-tc')];
+const TRANSACTIONS = [...buildTx(TX_PRODU,'produ-tc'), ...buildTx(TX_BP,'bp-tc'), ...buildTx(TX_BPD,'bp-deb')];
 
 const FIJOS_DEFAULT = [
   {id:'f1', name:'Luca', amt:750},
