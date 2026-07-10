@@ -84,7 +84,9 @@ def clean_merchant(raw: str) -> str:
     m = ' '.join(raw.strip().split())
     # Cortar en frases de disclaimer conocidas (case-insensitive)
     for phrase in ['si no realizaste', 'si usted no', 'atentamente', 'produbanco',
-                   'le informamos', 'recuerda que', 'por su seguridad']:
+                   'le informamos', 'recuerda que', 'por su seguridad',
+                   'esta transacción', 'esta transaccion', 'tiene un cargo',
+                   'por concepto de']:
         idx = m.lower().find(phrase)
         if idx > 0:
             m = m[:idx].strip()
