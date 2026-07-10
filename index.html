@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gastos · Junio 2026</title>
+<title>Gastos · Jay</title>
 <style>
 :root{
   --bg:#0D0D1A;
@@ -33,6 +33,13 @@ input,select{font-family:inherit;}
 .nav-btn.active{background:var(--card2);color:var(--text);box-shadow:inset 0 0 0 1px var(--border2);}
 
 .wrap{max-width:760px;margin:0 auto;padding:18px 16px 0;}
+
+/* MONTH NAV */
+.month-nav{max-width:760px;margin:14px auto 0;padding:0 16px;display:flex;align-items:center;justify-content:center;gap:14px;}
+.month-nav .mn-btn{background:var(--card);border:1px solid var(--border2);color:var(--text);width:36px;height:36px;border-radius:10px;font-size:16px;font-weight:900;display:flex;align-items:center;justify-content:center;line-height:1;}
+.month-nav .mn-btn:disabled{opacity:0.3;cursor:default;}
+.month-nav .mn-btn:not(:disabled):hover{background:var(--card2);border-color:var(--violet);}
+.month-nav .mn-label{font-size:14px;font-weight:900;letter-spacing:0.05em;text-transform:uppercase;min-width:150px;text-align:center;}
 
 /* HEADER */
 .page-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;gap:10px;}
@@ -132,13 +139,15 @@ input,select{font-family:inherit;}
 <body>
 
 <div style="background:rgba(167,139,250,0.08);border-bottom:1px solid rgba(167,139,250,0.2);text-align:center;padding:6px 16px;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#A78BFA;">
-  ↻ Última actualización: 9 jul 2026, 20:36
+  ↻ Última actualización: 9 jul 2026, 20:54
 </div>
 <div class="nav">
   <button class="nav-btn active" data-view="gastos">💳 Gastos</button>
   <button class="nav-btn" data-view="fijos">🔁 Fijos</button>
   <button class="nav-btn" data-view="analisis">📊 Análisis</button>
 </div>
+
+<div class="month-nav" id="monthNav"></div>
 
 <div class="wrap" id="app"></div>
 <div class="toast" id="toast"></div>
@@ -231,13 +240,25 @@ const TX_PRODU = [
 ['prea8a91','2026-06-06','00:57','Memorae.Com','MEMORAE.COM',4.99,'compras'],
 ['prb11f03','2026-06-06','10:07','Google Youtubepremi','GOOGLE YOUTUBEPREMI',7.99,'suscripcion'],
 ['pr0aff80','2026-06-06','05:21','Apple.Com/Bill','APPLE.COM/BILL',6.99,'suscripcion'],
-['pr5e30b3','2026-06-06','15:46','Paypal *Airbnb Hmmd Esta Transacción Tiene Un Cargo Por El Valor De $1.96 Por Concepto De Cargos En Consumos En El Exterior Por Montos Mayores A $100','PAYPAL *AIRBNB HMMD ESTA TRANSACCIÓN TIENE UN CARGO POR EL VALOR DE $1.96 POR CONCEPTO DE CARGOS EN CONSUMOS EN EL EXTERIOR POR MONTOS MAYORES A $100',124.50,'suscripcion'],
+['pr5e30b3','2026-06-06','15:46','Paypal *Airbnb Hmmd','PAYPAL *AIRBNB HMMD',124.50,'suscripcion'],
 ['pr085dea','2026-06-06','17:08','Paypal *Canvaptylim','PAYPAL *CANVAPTYLIM',6.50,'suscripcion'],
 ['pr2a28f6','2026-06-06','09:50','Paypal *Spotify*P43','PAYPAL *SPOTIFY*P43',10.99,'suscripcion'],
 ['prd5ad45','2026-06-28','13:17','Grupo Trujillo S.C','GRUPO TRUJILLO S.C',26.80,'compras'],
 ['pr98d54f','2026-06-28','15:22','Pycca Cuenca','PYCCA CUENCA',30.95,'compras'],
 ['pr5bfa02','2026-06-06','05:18','Apple.Com/Bill','APPLE.COM/BILL',9.99,'suscripcion'],
-['prad89df','2026-06-30','10:24','Unidad Educativa Sa','UNIDAD EDUCATIVA SA',48.75,'compras']
+['prad89df','2026-06-30','10:24','Unidad Educativa Sa','UNIDAD EDUCATIVA SA',48.75,'compras'],
+['pr640536','2026-07-07','15:09','Paypal *Airbnb Hmmd','PAYPAL *AIRBNB HMMD',124.50,'suscripcion'],
+['pr323443','2026-07-02','18:51','Megakywi Cuenca','MEGAKYWI CUENCA',23.68,'compras'],
+['pre3c1bc','2026-07-02','19:24','Megamaxi Cuenca Lc','MEGAMAXI CUENCA LC',57.37,'supermercado'],
+['prd8e59d','2026-07-07','11:28','Paypal *Stellarwp','PAYPAL *STELLARWP',39.00,'suscripcion'],
+['pr2ba2ca','2026-07-03','13:43','Hotel Zahir Reserva','HOTEL ZAHIR RESERVA',10.00,'viajes'],
+['pr011344','2026-07-03','23:25','Mcdonald S Cuenca','MCDONALD S CUENCA',13.30,'comida'],
+['pr45bfa1','2026-07-04','13:18','Coralrio','CORALRIO',26.55,'supermercado'],
+['pr12a945','2026-07-04','14:04','P2P Multicines Mall','P2P MULTICINES MALL',22.80,'compras'],
+['prcec2a9','2026-07-04','16:11','Comercial Kywi Cuen','COMERCIAL KYWI CUEN',12.25,'compras'],
+['prfebddb','2026-07-04','16:23','Jugueton Cuenca','JUGUETON CUENCA',13.62,'compras'],
+['pr1cc40d','2026-07-05','16:33','Patas Pet Market','PATAS PET MARKET',21.99,'compras'],
+['prbafff3','2026-07-07','22:40','Ita Cocina Diversa','ITA COCINA DIVERSA',67.00,'comida'],
 ];
 
 // Banco del Pacífico · PacifiCard Mastercard
@@ -264,7 +285,17 @@ const TX_BP = [
 ['b_ifttt','2026-06-15','08:00','IFTTT PRO+','IFTTT PRO+ SAN FRANCISCO',4.99,'suscripcion'],
 ['bp779f68','2026-06-23','17:23','Corporacion Cobos Cobo Cuenca','CORPORACION COBOS COBO CUENCA',29.90,'compras'],
 ['bpf135c4','2026-06-29','12:01','Explorer','EXPLORER',131.51,'compras'],
-['bp07f6ce','2026-06-29','12:45','Italdeli Cuenca','ITALDELI CUENCA',17.37,'compras']
+['bp07f6ce','2026-06-29','12:45','Italdeli Cuenca','ITALDELI CUENCA',17.37,'compras'],
+['bp74856f','2026-07-01','12:27','Wayra Plaza Cuenca Quito','WAYRA PLAZA CUENCA QUITO',17.20,'compras'],
+['bp0c4ce6','2026-07-01','12:49','Fybeca Sangolqui','FYBECA SANGOLQUI',29.39,'salud'],
+['bp7b5641','2026-07-01','17:58','Explorer','EXPLORER',89.99,'compras'],
+['bp70d400','2026-07-02','10:59','Gasolinera Gonzalez Cuenca','GASOLINERA GONZALEZ CUENCA',30.23,'transporte'],
+['bpe19325','2026-07-02','11:57','Bermeo Hnos Cuenca','BERMEO HNOS CUENCA',40.35,'compras'],
+['bpd6d3b0','2026-07-02','14:24','La Rapida Cuenca','LA RAPIDA CUENCA',29.00,'compras'],
+['bp525cc4','2026-07-03','12:25','Pasa El Vergel Cuenca','PASA EL VERGEL CUENCA',34.88,'compras'],
+['bp467fdb','2026-07-03','16:19','Tipti04 Pmz Quito','TIPTI04 PMZ QUITO',67.13,'supermercado'],
+['bp786752','2026-07-03','16:38','Tipti04 Pmz Quito','TIPTI04 PMZ QUITO',49.96,'supermercado'],
+['bpfb8034','2026-07-03','17:24','Tipti04 Pmz Quito','TIPTI04 PMZ QUITO',1.88,'supermercado'],
 ];
 
 // Banco del Pacífico · Débito (XXX73)
@@ -304,15 +335,34 @@ const FIJOS_DEFAULT = [
   {id:'f10', name:'Extra Luca', amt:100}
 ];
 
-const DAYS_IN_MONTH = 30;
-const TODAY = 23;
+/* ===================== MESES ===================== */
+const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function daysInMonth(ym){ const [y,m]=ym.split('-').map(Number); return new Date(y,m,0).getDate(); }
+function monthLabel(ym){ const [y,m]=ym.split('-').map(Number); return MONTH_NAMES[m-1]+' '+y; }
+
+const _now = new Date();
+const REAL_MONTH = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}`;
+// Meses disponibles: los que tienen transacciones + el mes actual real
+const availableMonths = [...new Set([...TRANSACTIONS.map(t=>t.date.slice(0,7)), REAL_MONTH])].sort();
 
 /* ===================== STATE ===================== */
-const LS_EXC = 'jay_exp_excluded_2026_06';
-const LS_FIJOS = 'jay_exp_fijos_2026_06';
+let curMonth, DAYS_IN_MONTH, TODAY, LS_EXC, LS_FIJOS, excluded, fijos, MTX;
 
-let excluded = new Set(JSON.parse(localStorage.getItem(LS_EXC) || '[]'));
-let fijos = JSON.parse(localStorage.getItem(LS_FIJOS) || 'null') || FIJOS_DEFAULT.map(f=>({...f}));
+function setMonth(ym){
+  curMonth = ym;
+  DAYS_IN_MONTH = daysInMonth(ym);
+  TODAY = (ym === REAL_MONTH) ? _now.getDate() : daysInMonth(ym);
+  LS_EXC = 'jay_exp_excluded_' + ym.replace('-','_');
+  LS_FIJOS = 'jay_exp_fijos_' + ym.replace('-','_');
+  excluded = new Set(JSON.parse(localStorage.getItem(LS_EXC) || '[]'));
+  fijos = JSON.parse(localStorage.getItem(LS_FIJOS) || 'null') || FIJOS_DEFAULT.map(f=>({...f}));
+  MTX = TRANSACTIONS.filter(t => t.date.slice(0,7) === ym);
+}
+// Arranca en el mes más reciente que tenga transacciones (evita abrir en un mes vacío);
+// el mes actual real igual queda disponible en el selector para navegar.
+const monthsWithData = [...new Set(TRANSACTIONS.map(t=>t.date.slice(0,7)))].sort();
+setMonth(monthsWithData.length ? monthsWithData[monthsWithData.length-1] : REAL_MONTH);
+
 let view = 'gastos';
 let filterAcct = 'all';
 let filterCat = 'all';
@@ -340,7 +390,7 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
 
 /* ===================== RENDER: GASTOS ===================== */
 function filteredTx(){
-  return TRANSACTIONS.filter(t=>{
+  return MTX.filter(t=>{
     if(filterAcct!=='all' && t.acct!==filterAcct) return false;
     if(filterCat!=='all' && t.cat!==filterCat) return false;
     if(filterSearch && !(t.est+t.raw).toLowerCase().includes(filterSearch.toLowerCase())) return false;
@@ -356,7 +406,7 @@ function renderGastos(){
   // account chips
   const acctTotals = {};
   Object.keys(ACCTS).forEach(a=>acctTotals[a]=0);
-  TRANSACTIONS.forEach(t=>{ if(!excluded.has(t.id)) acctTotals[t.acct]+=t.amt; });
+  MTX.forEach(t=>{ if(!excluded.has(t.id)) acctTotals[t.acct]+=t.amt; });
 
   // group by day
   const groups = {};
@@ -367,7 +417,7 @@ function renderGastos(){
   <div class="page-head">
     <div>
       <h1 class="page-title">Gastos</h1>
-      <div class="page-sub">Junio 2026 · día ${TODAY}/${DAYS_IN_MONTH}</div>
+      <div class="page-sub">${monthLabel(curMonth)} · día ${TODAY}/${DAYS_IN_MONTH}</div>
     </div>
     <div class="head-actions">
       <button class="icon-btn" id="syncBtn"><span class="spin-ic">↻</span> Revisar correos</button>
@@ -526,7 +576,7 @@ function renderFijos(){
 
 /* ===================== RENDER: ANALISIS ===================== */
 function renderAnalisis(){
-  const realSpend = TRANSACTIONS.reduce((s,t)=> excluded.has(t.id) ? s : s+t.amt, 0);
+  const realSpend = MTX.reduce((s,t)=> excluded.has(t.id) ? s : s+t.amt, 0);
   const fijosTotal = fijos.reduce((s,f)=>s+(parseFloat(f.amt)||0),0);
   const dailyAvg = fijosTotal / DAYS_IN_MONTH;
   const expected = dailyAvg * TODAY;
@@ -551,7 +601,7 @@ function renderAnalisis(){
 
   // daily spend array
   const dailySpend = Array(DAYS_IN_MONTH).fill(0);
-  TRANSACTIONS.forEach(t=>{
+  MTX.forEach(t=>{
     if(excluded.has(t.id)) return;
     const day = parseInt(t.date.split('-')[2],10);
     dailySpend[day-1] += t.amt;
@@ -560,7 +610,7 @@ function renderAnalisis(){
 
   // top categories
   const catTotals = {};
-  TRANSACTIONS.forEach(t=>{
+  MTX.forEach(t=>{
     if(excluded.has(t.id)) return;
     catTotals[t.cat] = (catTotals[t.cat]||0) + t.amt;
   });
@@ -615,9 +665,9 @@ function renderAnalisis(){
 
 /* ===================== PNG EXPORT ===================== */
 function exportPNG(){
-  const realSpend = TRANSACTIONS.reduce((s,t)=> excluded.has(t.id) ? s : s+t.amt, 0);
+  const realSpend = MTX.reduce((s,t)=> excluded.has(t.id) ? s : s+t.amt, 0);
   const catTotals = {};
-  TRANSACTIONS.forEach(t=>{
+  MTX.forEach(t=>{
     if(excluded.has(t.id)) return;
     catTotals[t.cat] = (catTotals[t.cat]||0) + t.amt;
   });
@@ -675,14 +725,29 @@ function exportPNG(){
   toast('✓ PNG descargado');
 }
 
+/* ===================== MONTH NAV ===================== */
+function renderMonthNav(){
+  const i = availableMonths.indexOf(curMonth);
+  const el = document.getElementById('monthNav');
+  el.innerHTML = `
+    <button class="mn-btn" id="mnPrev" ${i<=0?'disabled':''}>‹</button>
+    <span class="mn-label">${monthLabel(curMonth)}</span>
+    <button class="mn-btn" id="mnNext" ${i>=availableMonths.length-1?'disabled':''}>›</button>`;
+  const prev = document.getElementById('mnPrev');
+  const next = document.getElementById('mnNext');
+  if(prev && i>0) prev.addEventListener('click', ()=>{ setMonth(availableMonths[i-1]); render(); });
+  if(next && i<availableMonths.length-1) next.addEventListener('click', ()=>{ setMonth(availableMonths[i+1]); render(); });
+}
+
 /* ===================== MAIN RENDER ===================== */
 function render(){
+  renderMonthNav();
   if(view==='gastos') renderGastos();
   else if(view==='fijos') renderFijos();
   else renderAnalisis();
 }
 render();
-<!-- GMAIL_PROCESSED: 6a1d90a6.65217a4e.12b54b.6666SMTPIN_ADDED_MISSING@mx.google.com,6a207ef8.4fa4c39b.29c37a.8f66SMTPIN_ADDED_MISSING@mx.google.com,6a21755a.abb6ce21.ff0f5.5481SMTPIN_ADDED_MISSING@mx.google.com,6a218c5c.be650b2f.d1921.96e8SMTPIN_ADDED_MISSING@mx.google.com,6a22dbc1.25b49457.12235e.acfbSMTPIN_ADDED_MISSING@mx.google.com,6a25f9e9.d1017819.2ccfa1.6f1fSMTPIN_ADDED_MISSING@mx.google.com,6a260bc0.650532f6.20b2f1.1b91SMTPIN_ADDED_MISSING@mx.google.com,6a29887e.87f94da0.16fac3.4f95SMTPIN_ADDED_MISSING@mx.google.com,6a29e9f6.d490ad98.38022f.a345SMTPIN_ADDED_MISSING@mx.google.com,6a2ca76f.8674d7dd.199cb5.bf08SMTPIN_ADDED_MISSING@mx.google.com,6a2d8d11.f458d089.2bef56.413aSMTPIN_ADDED_MISSING@mx.google.com,6a2de5fd.609f6923.36b897.3b9dSMTPIN_ADDED_MISSING@mx.google.com,6a2df2d8.1afc5457.393356.5c22SMTPIN_ADDED_MISSING@mx.google.com,6a31e461.c80ed685.37c8e2.b81aSMTPIN_ADDED_MISSING@mx.google.com,6a345774.132d0495.14a567.f534SMTPIN_ADDED_MISSING@mx.google.com,6a36e3d7.9a60357a.202f3a.c0adSMTPIN_ADDED_MISSING@mx.google.com,6a36e5e6.84174f06.2b0a0e.d853SMTPIN_ADDED_MISSING@mx.google.com,6a3ad007.60a652b3.3641eb.87acSMTPIN_ADDED_MISSING@mx.google.com,6a3b0746.954edb74.6a5f1.d11eSMTPIN_ADDED_MISSING@mx.google.com,6a42a534.e80e21b0.1c1422.93eeSMTPIN_ADDED_MISSING@mx.google.com,6a42af50.9d3ad032.25a8f5.689bSMTPIN_ADDED_MISSING@mx.google.com,E1wUoQS-0000000081b-3aHl@uiomatrp-mens04.produbanco.com,E1wUsyb-0000000082f-3TMX@uiomatrp-mens04.produbanco.com,E1wUsyq-000000008Vm-0k51@uiomatrp-mens04.produbanco.com,E1wV89q-000000000Xn-1XxX@uiomatrp-mens04.produbanco.com,E1wVDWq-000000004Y3-17rv@uiomatrp-mens04.produbanco.com,E1wVa1B-000000007B4-3gww@uiomatrp-mens04.produbanco.com,E1wVb4a-000000005fv-2S7g@uiomatrp-mens04.produbanco.com,E1wVfjm-000000003YE-3WRb@uiomatrp-mens04.produbanco.com,E1wVftM-000000006KQ-1NGP@uiomatrp-mens04.produbanco.com,E1wVgYz-000000000pv-2nTJ@uiomatrp-mens04.produbanco.com,E1wVuYM-000000005ca-2xFw@uiomatrp-mens04.produbanco.com,E1wVuZS-000000003th-19oU@uiomatrp-mens04.produbanco.com,E1wVyLl-000000007de-23kI@uiomatrp-mens04.produbanco.com,E1wW0nm-000000004yG-13FP@uiomatrp-mens04.produbanco.com,E1wW3dp-000000003Aq-3jDZ@uiomatrp-mens04.produbanco.com,E1wWGGU-000000007wj-19c4@uiomatrp-mens04.produbanco.com,E1wWHNG-00000000AkQ-2Fwb@uiomatrp-mens04.produbanco.com,E1wWNyU-00000000CmY-2fs4@uiomatrp-mens04.produbanco.com,E1wWRLE-000000002Lw-1icp@uiomatrp-mens04.produbanco.com,E1wX2Hi-000000007Aa-3My1@uiomatrp-mens04.produbanco.com,E1wX5vz-00000000C2Y-3jO9@uiomatrp-mens04.produbanco.com,E1wXNWA-000000004Re-1jQ8@uiomatrp-mens04.produbanco.com,E1wXS8L-0000000017t-01na@uiomatrp-mens04.produbanco.com,E1wXZ4D-00000000B2f-1hEW@uiomatrp-mens04.produbanco.com,E1wXkvR-000000000Ex-10gP@uiomatrp-mens04.produbanco.com,E1wXt6W-000000008hQ-2tXg@uiomatrp-mens04.produbanco.com,E1wY3gj-00000000BwE-3Rm0@uiomatrp-mens04.produbanco.com,E1wY61H-00000000CQb-0mul@uiomatrp-mens04.produbanco.com,E1wY64m-0000000058d-2tpc@uiomatrp-mens04.produbanco.com,E1wY702-000000005VO-0Es4@uiomatrp-mens04.produbanco.com,E1wYNro-000000008Cb-2r6y@uiomatrp-mens04.produbanco.com,E1wYRYG-000000009Di-0mjE@uiomatrp-mens04.produbanco.com,E1wYWCC-000000001BA-1L1A@uiomatrp-mens04.produbanco.com,E1wYnuy-000000000ou-39JT@uiomatrp-mens04.produbanco.com,E1wYoSx-000000006pG-42Dg@uiomatrp-mens04.produbanco.com,E1wYobt-0000000018r-0IiS@uiomatrp-mens04.produbanco.com,E1wYou1-000000003QF-3U6o@uiomatrp-mens04.produbanco.com,E1wZDj8-000000009HB-146O@uiomatrp-mens04.produbanco.com,E1wZNtt-000000000cy-1mJP@uiomatrp-mens04.produbanco.com,E1wZTLX-000000006Hd-4Aiq@uiomatrp-mens04.produbanco.com,E1wZjGI-000000009v9-1IGI@uiomatrp-mens04.produbanco.com,E1wZrqU-0000000018S-13kf@uiomatrp-mens04.produbanco.com,E1wb4VY-000000002i4-3H89@uiomatrp-mens04.produbanco.com,E1wbOoJ-000000001td-3E4z@uiomatrp-mens04.produbanco.com,E1wbRfM-000000003Su-27EZ@uiomatrp-mens04.produbanco.com,E1wbyFj-0000000005y-3lgZ@uiomatrp-mens04.produbanco.com,E1wc81C-000000009s8-2RRX@uiomatrp-mens04.produbanco.com,E1wc9IT-000000000sT-1jEQ@uiomatrp-mens04.produbanco.com,E1wcPSe-0000000049f-26Kl@uiomatrp-mens04.produbanco.com,E1wdu5F-00000000434-0txo@uiomatrp-mens04.produbanco.com,E1wdwZA-00000000AmZ-48Ei@uiomatrp-mens04.produbanco.com,E1we9bM-000000007ER-1cxJ@uiomatrp-mens04.produbanco.com,E1weAoN-000000004Zi-29sx@uiomatrp-mens04.produbanco.com,E1weard-000000000fx-2vZ1@uiomatrp-mens04.produbanco.com -->
+<!-- GMAIL_PROCESSED: 6a1d90a6.65217a4e.12b54b.6666SMTPIN_ADDED_MISSING@mx.google.com,6a207ef8.4fa4c39b.29c37a.8f66SMTPIN_ADDED_MISSING@mx.google.com,6a21755a.abb6ce21.ff0f5.5481SMTPIN_ADDED_MISSING@mx.google.com,6a218c5c.be650b2f.d1921.96e8SMTPIN_ADDED_MISSING@mx.google.com,6a22dbc1.25b49457.12235e.acfbSMTPIN_ADDED_MISSING@mx.google.com,6a25f9e9.d1017819.2ccfa1.6f1fSMTPIN_ADDED_MISSING@mx.google.com,6a260bc0.650532f6.20b2f1.1b91SMTPIN_ADDED_MISSING@mx.google.com,6a29887e.87f94da0.16fac3.4f95SMTPIN_ADDED_MISSING@mx.google.com,6a29e9f6.d490ad98.38022f.a345SMTPIN_ADDED_MISSING@mx.google.com,6a2ca76f.8674d7dd.199cb5.bf08SMTPIN_ADDED_MISSING@mx.google.com,6a2d8d11.f458d089.2bef56.413aSMTPIN_ADDED_MISSING@mx.google.com,6a2de5fd.609f6923.36b897.3b9dSMTPIN_ADDED_MISSING@mx.google.com,6a2df2d8.1afc5457.393356.5c22SMTPIN_ADDED_MISSING@mx.google.com,6a31e461.c80ed685.37c8e2.b81aSMTPIN_ADDED_MISSING@mx.google.com,6a345774.132d0495.14a567.f534SMTPIN_ADDED_MISSING@mx.google.com,6a36e3d7.9a60357a.202f3a.c0adSMTPIN_ADDED_MISSING@mx.google.com,6a36e5e6.84174f06.2b0a0e.d853SMTPIN_ADDED_MISSING@mx.google.com,6a3ad007.60a652b3.3641eb.87acSMTPIN_ADDED_MISSING@mx.google.com,6a3b0746.954edb74.6a5f1.d11eSMTPIN_ADDED_MISSING@mx.google.com,6a42a534.e80e21b0.1c1422.93eeSMTPIN_ADDED_MISSING@mx.google.com,6a42af50.9d3ad032.25a8f5.689bSMTPIN_ADDED_MISSING@mx.google.com,6a454e01.a9c0fa1f.257059.94beSMTPIN_ADDED_MISSING@mx.google.com,6a455318.f3a9444e.19d5ca.1133SMTPIN_ADDED_MISSING@mx.google.com,6a459ba3.da9614d3.ab3e.0834SMTPIN_ADDED_MISSING@mx.google.com,6a468ad5.fd8b249c.383469.6a7eSMTPIN_ADDED_MISSING@mx.google.com,6a469860.131c432a.27a8df.d287SMTPIN_ADDED_MISSING@mx.google.com,6a46baf8.9dbdc72a.1fcb1f.dda8SMTPIN_ADDED_MISSING@mx.google.com,6a47f091.d539120b.14c44b.6e19SMTPIN_ADDED_MISSING@mx.google.com,6a482767.e5820260.d97b6.1a72SMTPIN_ADDED_MISSING@mx.google.com,6a482bc2.b131de36.f032b.6bd1SMTPIN_ADDED_MISSING@mx.google.com,6a483688.068b9d50.3614cd.787eSMTPIN_ADDED_MISSING@mx.google.com,E1wUoQS-0000000081b-3aHl@uiomatrp-mens04.produbanco.com,E1wUsyb-0000000082f-3TMX@uiomatrp-mens04.produbanco.com,E1wUsyq-000000008Vm-0k51@uiomatrp-mens04.produbanco.com,E1wV89q-000000000Xn-1XxX@uiomatrp-mens04.produbanco.com,E1wVDWq-000000004Y3-17rv@uiomatrp-mens04.produbanco.com,E1wVa1B-000000007B4-3gww@uiomatrp-mens04.produbanco.com,E1wVb4a-000000005fv-2S7g@uiomatrp-mens04.produbanco.com,E1wVfjm-000000003YE-3WRb@uiomatrp-mens04.produbanco.com,E1wVftM-000000006KQ-1NGP@uiomatrp-mens04.produbanco.com,E1wVgYz-000000000pv-2nTJ@uiomatrp-mens04.produbanco.com,E1wVuYM-000000005ca-2xFw@uiomatrp-mens04.produbanco.com,E1wVuZS-000000003th-19oU@uiomatrp-mens04.produbanco.com,E1wVyLl-000000007de-23kI@uiomatrp-mens04.produbanco.com,E1wW0nm-000000004yG-13FP@uiomatrp-mens04.produbanco.com,E1wW3dp-000000003Aq-3jDZ@uiomatrp-mens04.produbanco.com,E1wWGGU-000000007wj-19c4@uiomatrp-mens04.produbanco.com,E1wWHNG-00000000AkQ-2Fwb@uiomatrp-mens04.produbanco.com,E1wWNyU-00000000CmY-2fs4@uiomatrp-mens04.produbanco.com,E1wWRLE-000000002Lw-1icp@uiomatrp-mens04.produbanco.com,E1wX2Hi-000000007Aa-3My1@uiomatrp-mens04.produbanco.com,E1wX5vz-00000000C2Y-3jO9@uiomatrp-mens04.produbanco.com,E1wXNWA-000000004Re-1jQ8@uiomatrp-mens04.produbanco.com,E1wXS8L-0000000017t-01na@uiomatrp-mens04.produbanco.com,E1wXZ4D-00000000B2f-1hEW@uiomatrp-mens04.produbanco.com,E1wXkvR-000000000Ex-10gP@uiomatrp-mens04.produbanco.com,E1wXt6W-000000008hQ-2tXg@uiomatrp-mens04.produbanco.com,E1wY3gj-00000000BwE-3Rm0@uiomatrp-mens04.produbanco.com,E1wY61H-00000000CQb-0mul@uiomatrp-mens04.produbanco.com,E1wY64m-0000000058d-2tpc@uiomatrp-mens04.produbanco.com,E1wY702-000000005VO-0Es4@uiomatrp-mens04.produbanco.com,E1wYNro-000000008Cb-2r6y@uiomatrp-mens04.produbanco.com,E1wYRYG-000000009Di-0mjE@uiomatrp-mens04.produbanco.com,E1wYWCC-000000001BA-1L1A@uiomatrp-mens04.produbanco.com,E1wYnuy-000000000ou-39JT@uiomatrp-mens04.produbanco.com,E1wYoSx-000000006pG-42Dg@uiomatrp-mens04.produbanco.com,E1wYobt-0000000018r-0IiS@uiomatrp-mens04.produbanco.com,E1wYou1-000000003QF-3U6o@uiomatrp-mens04.produbanco.com,E1wZDj8-000000009HB-146O@uiomatrp-mens04.produbanco.com,E1wZNtt-000000000cy-1mJP@uiomatrp-mens04.produbanco.com,E1wZTLX-000000006Hd-4Aiq@uiomatrp-mens04.produbanco.com,E1wZjGI-000000009v9-1IGI@uiomatrp-mens04.produbanco.com,E1wZrqU-0000000018S-13kf@uiomatrp-mens04.produbanco.com,E1wb4VY-000000002i4-3H89@uiomatrp-mens04.produbanco.com,E1wbOoJ-000000001td-3E4z@uiomatrp-mens04.produbanco.com,E1wbRfM-000000003Su-27EZ@uiomatrp-mens04.produbanco.com,E1wbyFj-0000000005y-3lgZ@uiomatrp-mens04.produbanco.com,E1wc81C-000000009s8-2RRX@uiomatrp-mens04.produbanco.com,E1wc9IT-000000000sT-1jEQ@uiomatrp-mens04.produbanco.com,E1wcPSe-0000000049f-26Kl@uiomatrp-mens04.produbanco.com,E1wdu5F-00000000434-0txo@uiomatrp-mens04.produbanco.com,E1wdwZA-00000000AmZ-48Ei@uiomatrp-mens04.produbanco.com,E1we9bM-000000007ER-1cxJ@uiomatrp-mens04.produbanco.com,E1weAoN-000000004Zi-29sx@uiomatrp-mens04.produbanco.com,E1weard-000000000fx-2vZ1@uiomatrp-mens04.produbanco.com,E1wf1mO-000000007UC-2yKB@uiomatrp-mens04.produbanco.com,E1wfRin-00000000AAe-2e1R@uiomatrp-mens04.produbanco.com,E1wfSFG-000000004qj-1TAT@uiomatrp-mens04.produbanco.com,E1wfgkf-0000000021U-37Mc@uiomatrp-mens04.produbanco.com,E1wfjP2-000000002pm-3Zf7@uiomatrp-mens04.produbanco.com,E1wfrwn-000000007bZ-2Gb5@uiomatrp-mens04.produbanco.com,E1wg4xY-000000008FO-2EuP@uiomatrp-mens04.produbanco.com,E1wg6Cg-000000006Xe-2so2@uiomatrp-mens04.produbanco.com,E1wg8Bv-0000000044Y-1O1D@uiomatrp-mens04.produbanco.com,E1wg8Mn-000000003wM-48Dz@uiomatrp-mens04.produbanco.com,E1wgV08-00000000AOF-05uE@uiomatrp-mens04.produbanco.com,E1whJA3-000000003tL-3JKb@uiomatrp-mens04.produbanco.com -->
 </script>
 </body>
 </html>
