@@ -59,6 +59,19 @@ def strip_html(h: str) -> str:
     text = html_mod.unescape(text)
     return re.sub(r'\s+', ' ', text).strip()
 
+def clean_merchant(raw: str) -> str:
+    """Corta el texto de seguridad/legal que algunos bancos agregan al nombre."""
+    m = ' '.join(raw.strip().split())
+    # Cortar en frases de disclaimer conocidas (case-insensitive)
+    for phrase in ['si no realizaste', 'si usted no', 'atentamente', 'produbanco',
+                   'le informamos', 'recuerda que', 'por su seguridad']:
+        idx = m.lower().find(phrase)
+        if idx > 0:
+            m = m[:idx].strip()
+    # Colapsar espacios múltiples que los bancos usan como padding
+    m = ' '.join(m.split())
+    return m.strip(' .,-')
+
 def tx_id(acct: str, date: str, time: str, amt: float) -> str:
     key = f'{acct}|{date}|{time}|{amt:.2f}'
     return acct[:2] + hashlib.md5(key.encode()).hexdigest()[:6]
@@ -76,7 +89,7 @@ def parse_produ(html_body: str, email_date: datetime) -> dict | None:
     time_s = m_date.group(4)
     date_s = f'{year}-{mon:02d}-{day:02d}'
     amt = float(m_amt.group(1).replace(',', ''))
-    merchant = ' '.join(m_est.group(1).strip().split())
+    merchant = clean_merchant(m_est.group(1))
     cat = guess_cat(merchant)
     return {'acct':'produ-tc','date':date_s,'time':time_s,
             'est':merchant.title(),'raw':merchant.upper(),'amt':amt,'cat':cat}
@@ -91,7 +104,7 @@ def parse_bp_tc(html_body: str, email_date: datetime) -> dict | None:
     date_s = m_date.group(1)
     time_s = m_date.group(2)
     amt = float(m_amt.group(1).replace(',', ''))
-    merchant = ' '.join(m_est.group(1).strip().split())
+    merchant = clean_merchant(m_est.group(1))
     cat = guess_cat(merchant)
     return {'acct':'bp-tc','date':date_s,'time':time_s,
             'est':merchant.title(),'raw':merchant.upper(),'amt':amt,'cat':cat}
