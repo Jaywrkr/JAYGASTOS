@@ -34,17 +34,37 @@ MONTHS_ES_LONG = {
 }
 
 MERCHANT_CATS = {
+    # Comida (restaurantes / delivery) — se evalúa primero
+    'bocatti':'comida','burger':'comida','pizza':'comida','kfc':'comida','mcdonald':'comida',
+    'uber eats':'comida','rappi':'comida','pedidosya':'comida','restaurant':'comida','cocina':'comida',
+    'sushi':'comida','taco bell':'comida','papa john':'comida','krispy':'comida','erretz':'comida',
+    'subway':'comida','juan valdez':'comida','sweet':'comida','cafe':'comida','café':'comida',
+    # Supermercado
     'tipti':'supermercado','supermaxi':'supermercado','coral':'supermercado','megamaxi':'supermercado',
-    'bocatti':'comida','burger':'comida','pizza':'comida','kfc':'comida','mcdonalds':'comida',
-    'uber eats':'comida','rappi':'comida','restaurant':'comida','cocina':'comida','sushi':'comida',
-    'gasolinera':'transporte','petroecuador':'transporte','uber':'transporte','cabify':'transporte',
+    'mi comisariato':'supermercado','aki':'supermercado','tia':'supermercado',
+    # Transporte
+    'gasolinera':'transporte','petroecuador':'transporte','primax':'transporte','terpel':'transporte',
+    'uber':'transporte','cabify':'transporte','didi':'transporte',
+    # Suscripciones / servicios digitales
     'netflix':'suscripcion','spotify':'suscripcion','apple':'suscripcion','amazon':'suscripcion',
     'paypal':'suscripcion','google':'suscripcion','hostinger':'suscripcion','ifttt':'suscripcion',
-    'microsoft':'suscripcion','adobe':'suscripcion','openai':'suscripcion',
-    'farmacia':'salud','clinica':'salud','hospital':'salud','laboratorio':'salud',
-    'airbnb':'viajes','hotel':'viajes','booking':'viajes',
-    'colineal':'hogar','chordeleg':'compras',
-    'apadel':'entretenimiento','paddle':'entretenimiento',
+    'microsoft':'suscripcion','adobe':'suscripcion','openai':'suscripcion','audible':'suscripcion',
+    'patreon':'suscripcion','godaddy':'suscripcion','starlink':'suscripcion','pdfmonkey':'suscripcion',
+    'stellarwp':'suscripcion','playstation':'suscripcion','oculus':'suscripcion','nuvei':'suscripcion',
+    # Salud
+    'farmacia':'salud','fybeca':'salud','sana sana':'salud','cruz azul':'salud','pharmacy':'salud',
+    'clinica':'salud','clínica':'salud','hospital':'salud','laboratorio':'salud','medico':'salud',
+    # Viajes
+    'airbnb':'viajes','hotel':'viajes','booking':'viajes','despegar':'viajes','latam':'viajes','avianca':'viajes',
+    # Hogar / muebles / decoración
+    'colineal':'hogar','todohogar':'hogar','ambiente living':'hogar','casa firenza':'hogar',
+    'naniconcept':'hogar','centro sur':'hogar','electricas':'hogar',
+    # Entretenimiento
+    'apadel':'entretenimiento','paddle':'entretenimiento','karting':'entretenimiento','cinemark':'entretenimiento',
+    'supercines':'entretenimiento',
+    # Mascotas / compras varias
+    'pet market':'compras','mascota':'compras','patas':'compras','miniso':'compras',
+    'hm':'compras','h&m':'compras','ecuavapes':'compras','libreria':'compras','librería':'compras',
 }
 
 def guess_cat(merchant: str) -> str:
@@ -190,7 +210,11 @@ def insert_into_array(content: str, array_name: str, lines: list[str]) -> str:
     # Find the closing ]; of the named array and insert before it
     pattern = rf'(const {re.escape(array_name)} = \[)([\s\S]*?)(\n\];)'
     def replacer(m):
-        return m.group(1) + m.group(2) + new_lines + m.group(3)
+        body = m.group(2).rstrip()
+        # La última fila existente puede no tener coma final: agregarla
+        if body and not body.endswith(','):
+            body += ','
+        return m.group(1) + body + new_lines + m.group(3)
     return re.sub(pattern, replacer, content)
 
 def main():
@@ -213,6 +237,11 @@ def main():
     month_prefix = f'{year}-{month:02d}'
     print(f"Mes activo: {month_prefix}  |  Buscando desde: {since_imap}")
 
+    # Firmas (fecha, monto) de transacciones ya presentes, para evitar duplicados
+    existing = set()
+    for row in re.findall(r"\['[^']*','(\d{4}-\d{2}-\d{2})','[\d:]{5}',[^\]]*?,(\d+\.\d{2}),'[^']*'\]", content):
+        existing.add((row[0], row[1]))
+
     # Connect IMAP
     imap = imaplib.IMAP4_SSL('imap.gmail.com')
     imap.login(GMAIL_USER, GMAIL_PASS)
@@ -225,9 +254,12 @@ def main():
             continue
         tx = parse_produ(e['html_body'], e['email_date'])
         if tx and tx['date'].startswith(month_prefix):
+            if (tx['date'], f"{tx['amt']:.2f}") in existing:
+                processed.add(e['msg_id']); continue
             tid = tx_id(tx['acct'], tx['date'], tx['time'], tx['amt'])
             line = f"['{tid}','{tx['date']}','{tx['time']}','{tx['est']}','{tx['raw']}',{tx['amt']:.2f},'{tx['cat']}'],"
             new_produ.append(line)
+            existing.add((tx['date'], f"{tx['amt']:.2f}"))
             processed.add(e['msg_id'])
             print(f"  + Produbanco: {tx['date']} {tx['est']} ${tx['amt']:.2f}")
 
@@ -237,9 +269,12 @@ def main():
             continue
         tx = parse_bp_tc(e['html_body'], e['email_date'])
         if tx and tx['date'].startswith(month_prefix):
+            if (tx['date'], f"{tx['amt']:.2f}") in existing:
+                processed.add(e['msg_id']); continue
             tid = tx_id(tx['acct'], tx['date'], tx['time'], tx['amt'])
             line = f"['{tid}','{tx['date']}','{tx['time']}','{tx['est']}','{tx['raw']}',{tx['amt']:.2f},'{tx['cat']}'],"
             new_bptc.append(line)
+            existing.add((tx['date'], f"{tx['amt']:.2f}"))
             processed.add(e['msg_id'])
             print(f"  + BP TC: {tx['date']} {tx['est']} ${tx['amt']:.2f}")
 
@@ -255,9 +290,12 @@ def main():
         else:
             continue
         if tx and tx['date'].startswith(month_prefix):
+            if (tx['date'], f"{tx['amt']:.2f}") in existing:
+                processed.add(e['msg_id']); continue
             tid = tx_id(tx['acct'], tx['date'], tx['time'], tx['amt'])
             line = f"['{tid}','{tx['date']}','{tx['time']}','{tx['est']}','{tx['raw']}',{tx['amt']:.2f},'{tx['cat']}'],"
             new_bpdeb.append(line)
+            existing.add((tx['date'], f"{tx['amt']:.2f}"))
             processed.add(e['msg_id'])
             print(f"  + BP Déb: {tx['date']} {tx['est']} ${tx['amt']:.2f}")
 
