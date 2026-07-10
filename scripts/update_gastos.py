@@ -227,15 +227,16 @@ def main():
     if proc_match:
         processed = {x.strip() for x in proc_match.group(1).split(',') if x.strip()}
 
-    # Active month from localStorage key
-    m = re.search(r"'jay_exp_excluded_(\d{4})_(\d{2})'", content)
-    if not m:
-        print("ERROR: No se pudo determinar el mes activo en index.html")
-        sys.exit(1)
-    year, month = int(m.group(1)), int(m.group(2))
+    # Mes real actual (hora Ecuador). Se puede forzar con la variable TARGET_MONTH=YYYY-MM
+    target = os.environ.get('TARGET_MONTH')
+    if target and re.match(r'\d{4}-\d{2}', target):
+        year, month = int(target[:4]), int(target[5:7])
+    else:
+        now = datetime.now(ECT)
+        year, month = now.year, now.month
     since_imap = f'01-{MONTHS_EN_IMAP[month-1]}-{year}'
     month_prefix = f'{year}-{month:02d}'
-    print(f"Mes activo: {month_prefix}  |  Buscando desde: {since_imap}")
+    print(f"Mes objetivo: {month_prefix}  |  Buscando desde: {since_imap}")
 
     # Firmas (fecha, monto) de transacciones ya presentes, para evitar duplicados
     existing = set()

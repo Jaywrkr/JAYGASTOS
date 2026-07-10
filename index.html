@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gastos · Junio 2026</title>
+<title>Gastos · Jay</title>
 <style>
 :root{
   --bg:#0D0D1A;
@@ -33,6 +33,13 @@ input,select{font-family:inherit;}
 .nav-btn.active{background:var(--card2);color:var(--text);box-shadow:inset 0 0 0 1px var(--border2);}
 
 .wrap{max-width:760px;margin:0 auto;padding:18px 16px 0;}
+
+/* MONTH NAV */
+.month-nav{max-width:760px;margin:14px auto 0;padding:0 16px;display:flex;align-items:center;justify-content:center;gap:14px;}
+.month-nav .mn-btn{background:var(--card);border:1px solid var(--border2);color:var(--text);width:36px;height:36px;border-radius:10px;font-size:16px;font-weight:900;display:flex;align-items:center;justify-content:center;line-height:1;}
+.month-nav .mn-btn:disabled{opacity:0.3;cursor:default;}
+.month-nav .mn-btn:not(:disabled):hover{background:var(--card2);border-color:var(--violet);}
+.month-nav .mn-label{font-size:14px;font-weight:900;letter-spacing:0.05em;text-transform:uppercase;min-width:150px;text-align:center;}
 
 /* HEADER */
 .page-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px;gap:10px;}
@@ -139,6 +146,8 @@ input,select{font-family:inherit;}
   <button class="nav-btn" data-view="fijos">🔁 Fijos</button>
   <button class="nav-btn" data-view="analisis">📊 Análisis</button>
 </div>
+
+<div class="month-nav" id="monthNav"></div>
 
 <div class="wrap" id="app"></div>
 <div class="toast" id="toast"></div>
@@ -304,15 +313,34 @@ const FIJOS_DEFAULT = [
   {id:'f10', name:'Extra Luca', amt:100}
 ];
 
-const DAYS_IN_MONTH = 30;
-const TODAY = 23;
+/* ===================== MESES ===================== */
+const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function daysInMonth(ym){ const [y,m]=ym.split('-').map(Number); return new Date(y,m,0).getDate(); }
+function monthLabel(ym){ const [y,m]=ym.split('-').map(Number); return MONTH_NAMES[m-1]+' '+y; }
+
+const _now = new Date();
+const REAL_MONTH = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}`;
+// Meses disponibles: los que tienen transacciones + el mes actual real
+const availableMonths = [...new Set([...TRANSACTIONS.map(t=>t.date.slice(0,7)), REAL_MONTH])].sort();
 
 /* ===================== STATE ===================== */
-const LS_EXC = 'jay_exp_excluded_2026_06';
-const LS_FIJOS = 'jay_exp_fijos_2026_06';
+let curMonth, DAYS_IN_MONTH, TODAY, LS_EXC, LS_FIJOS, excluded, fijos, MTX;
 
-let excluded = new Set(JSON.parse(localStorage.getItem(LS_EXC) || '[]'));
-let fijos = JSON.parse(localStorage.getItem(LS_FIJOS) || 'null') || FIJOS_DEFAULT.map(f=>({...f}));
+function setMonth(ym){
+  curMonth = ym;
+  DAYS_IN_MONTH = daysInMonth(ym);
+  TODAY = (ym === REAL_MONTH) ? _now.getDate() : daysInMonth(ym);
+  LS_EXC = 'jay_exp_excluded_' + ym.replace('-','_');
+  LS_FIJOS = 'jay_exp_fijos_' + ym.replace('-','_');
+  excluded = new Set(JSON.parse(localStorage.getItem(LS_EXC) || '[]'));
+  fijos = JSON.parse(localStorage.getItem(LS_FIJOS) || 'null') || FIJOS_DEFAULT.map(f=>({...f}));
+  MTX = TRANSACTIONS.filter(t => t.date.slice(0,7) === ym);
+}
+// Arranca en el mes más reciente que tenga transacciones (evita abrir en un mes vacío);
+// el mes actual real igual queda disponible en el selector para navegar.
+const monthsWithData = [...new Set(TRANSACTIONS.map(t=>t.date.slice(0,7)))].sort();
+setMonth(monthsWithData.length ? monthsWithData[monthsWithData.length-1] : REAL_MONTH);
+
 let view = 'gastos';
 let filterAcct = 'all';
 let filterCat = 'all';
@@ -340,7 +368,7 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
 
 /* ===================== RENDER: GASTOS ===================== */
 function filteredTx(){
-  return TRANSACTIONS.filter(t=>{
+  return MTX.filter(t=>{
     if(filterAcct!=='all' && t.acct!==filterAcct) return false;
     if(filterCat!=='all' && t.cat!==filterCat) return false;
     if(filterSearch && !(t.est+t.raw).toLowerCase().includes(filterSearch.toLowerCase())) return false;
@@ -356,7 +384,7 @@ function renderGastos(){
   // account chips
   const acctTotals = {};
   Object.keys(ACCTS).forEach(a=>acctTotals[a]=0);
-  TRANSACTIONS.forEach(t=>{ if(!excluded.has(t.id)) acctTotals[t.acct]+=t.amt; });
+  MTX.forEach(t=>{ if(!excluded.has(t.id)) acctTotals[t.acct]+=t.amt; });
 
   // group by day
   const groups = {};
@@ -367,7 +395,7 @@ function renderGastos(){
   <div class="page-head">
     <div>
       <h1 class="page-title">Gastos</h1>
-      <div class="page-sub">Junio 2026 · día ${TODAY}/${DAYS_IN_MONTH}</div>
+      <div class="page-sub">${monthLabel(curMonth)} · día ${TODAY}/${DAYS_IN_MONTH}</div>
     </div>
     <div class="head-actions">
       <button class="icon-btn" id="syncBtn"><span class="spin-ic">↻</span> Revisar correos</button>
@@ -526,7 +554,7 @@ function renderFijos(){
 
 /* ===================== RENDER: ANALISIS ===================== */
 function renderAnalisis(){
-  const realSpend = TRANSACTIONS.reduce((s,t)=> excluded.has(t.id) ? s : s+t.amt, 0);
+  const realSpend = MTX.reduce((s,t)=> excluded.has(t.id) ? s : s+t.amt, 0);
   const fijosTotal = fijos.reduce((s,f)=>s+(parseFloat(f.amt)||0),0);
   const dailyAvg = fijosTotal / DAYS_IN_MONTH;
   const expected = dailyAvg * TODAY;
@@ -551,7 +579,7 @@ function renderAnalisis(){
 
   // daily spend array
   const dailySpend = Array(DAYS_IN_MONTH).fill(0);
-  TRANSACTIONS.forEach(t=>{
+  MTX.forEach(t=>{
     if(excluded.has(t.id)) return;
     const day = parseInt(t.date.split('-')[2],10);
     dailySpend[day-1] += t.amt;
@@ -560,7 +588,7 @@ function renderAnalisis(){
 
   // top categories
   const catTotals = {};
-  TRANSACTIONS.forEach(t=>{
+  MTX.forEach(t=>{
     if(excluded.has(t.id)) return;
     catTotals[t.cat] = (catTotals[t.cat]||0) + t.amt;
   });
@@ -615,9 +643,9 @@ function renderAnalisis(){
 
 /* ===================== PNG EXPORT ===================== */
 function exportPNG(){
-  const realSpend = TRANSACTIONS.reduce((s,t)=> excluded.has(t.id) ? s : s+t.amt, 0);
+  const realSpend = MTX.reduce((s,t)=> excluded.has(t.id) ? s : s+t.amt, 0);
   const catTotals = {};
-  TRANSACTIONS.forEach(t=>{
+  MTX.forEach(t=>{
     if(excluded.has(t.id)) return;
     catTotals[t.cat] = (catTotals[t.cat]||0) + t.amt;
   });
@@ -675,8 +703,23 @@ function exportPNG(){
   toast('✓ PNG descargado');
 }
 
+/* ===================== MONTH NAV ===================== */
+function renderMonthNav(){
+  const i = availableMonths.indexOf(curMonth);
+  const el = document.getElementById('monthNav');
+  el.innerHTML = `
+    <button class="mn-btn" id="mnPrev" ${i<=0?'disabled':''}>‹</button>
+    <span class="mn-label">${monthLabel(curMonth)}</span>
+    <button class="mn-btn" id="mnNext" ${i>=availableMonths.length-1?'disabled':''}>›</button>`;
+  const prev = document.getElementById('mnPrev');
+  const next = document.getElementById('mnNext');
+  if(prev && i>0) prev.addEventListener('click', ()=>{ setMonth(availableMonths[i-1]); render(); });
+  if(next && i<availableMonths.length-1) next.addEventListener('click', ()=>{ setMonth(availableMonths[i+1]); render(); });
+}
+
 /* ===================== MAIN RENDER ===================== */
 function render(){
+  renderMonthNav();
   if(view==='gastos') renderGastos();
   else if(view==='fijos') renderFijos();
   else renderAnalisis();
