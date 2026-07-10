@@ -100,15 +100,28 @@ def tx_id(acct: str, date: str, time: str, amt: float) -> str:
 
 def parse_produ(html_body: str, email_date: datetime) -> dict | None:
     text = strip_html(html_body)
-    m_date = re.search(r'Fecha y Hora:\s*(\d+)/(\w+)/(\d{4})\s+(\d{2}:\d{2})', text)
-    m_amt  = re.search(r'Valor:\s*USD\s*([\d,]+\.?\d*)', text)
+    # Produbanco usa dos formatos de fecha:
+    #   "6/Julio/2026  9:01"   (día/mes-nombre/año)
+    #   "07/01/2026 12:41"     (MM/DD/YYYY numérico)
+    m_date = re.search(r'Fecha y Hora:\s*(\S+)\s+(\d{1,2}:\d{2})', text)
+    # Monto puede venir en USD o EUR
+    m_amt  = re.search(r'Valor:\s*(?:USD|EUR|\$)?\s*([\d,]+\.?\d*)', text)
     m_est  = re.search(r'Establecimiento:\s*(.+?)(?:Atentamente|Produbanco|$)', text)
     if not (m_date and m_amt and m_est):
         return None
-    day = int(m_date.group(1))
-    mon = MONTHS_ES_LONG.get(m_date.group(2), email_date.month)
-    year = int(m_date.group(3))
-    time_s = m_date.group(4)
+    tok = m_date.group(1)
+    time_s = m_date.group(2)
+    if len(time_s.split(':')[0]) == 1:
+        time_s = '0' + time_s
+    parts = tok.split('/')
+    if len(parts) == 3 and parts[1].isdigit():
+        # MM/DD/YYYY numérico
+        mon, day, year = int(parts[0]), int(parts[1]), int(parts[2])
+    elif len(parts) == 3:
+        # día/mes-nombre/año
+        day = int(parts[0]); mon = MONTHS_ES_LONG.get(parts[1], email_date.month); year = int(parts[2])
+    else:
+        return None
     date_s = f'{year}-{mon:02d}-{day:02d}'
     amt = float(m_amt.group(1).replace(',', ''))
     merchant = clean_merchant(m_est.group(1))
