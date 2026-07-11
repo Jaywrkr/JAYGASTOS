@@ -1,0 +1,14 @@
+{
+  "name": "JAYGASTOS · Gastos",
+  "short_name": "JAYGASTOS",
+  "description": "Control de gastos mensual",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0D0D1A",
+  "theme_color": "#0D0D1A",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
