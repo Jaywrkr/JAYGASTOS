@@ -329,6 +329,13 @@ def main():
     imap.login(GMAIL_USER, GMAIL_PASS)
 
     new_produ, new_bptc, new_bpdeb = [], [], []
+    alerts = []  # notificaciones push a enviar
+    PUSH_MIN = float(os.environ.get('PUSH_MIN', '100'))
+    def maybe_alert(tx):
+        if tx['amt'] >= PUSH_MIN:
+            alerts.append({'title': '💸 Gasto grande',
+                           'body': f"{tx['est']} · ${tx['amt']:.2f}",
+                           'tag': 'big-expense'})
 
     # --- Produbanco ---
     for e in fetch_emails(imap, since_imap, 'bancaenlinea@produbanco.com'):
@@ -342,6 +349,7 @@ def main():
             line = make_line(tid, tx)
             new_produ.append(line)
             existing.add((tx['date'], f"{tx['amt']:.2f}"))
+            maybe_alert(tx)
             processed.add(e['msg_id'])
             print(f"  + Produbanco: {tx['date']} {tx['est']} ${tx['amt']:.2f}")
 
@@ -357,6 +365,7 @@ def main():
             line = make_line(tid, tx)
             new_bptc.append(line)
             existing.add((tx['date'], f"{tx['amt']:.2f}"))
+            maybe_alert(tx)
             processed.add(e['msg_id'])
             print(f"  + BP TC: {tx['date']} {tx['est']} ${tx['amt']:.2f}")
 
@@ -378,10 +387,31 @@ def main():
             line = make_line(tid, tx)
             new_bpdeb.append(line)
             existing.add((tx['date'], f"{tx['amt']:.2f}"))
+            maybe_alert(tx)
             processed.add(e['msg_id'])
             print(f"  + BP Déb: {tx['date']} {tx['est']} ${tx['amt']:.2f}")
 
     imap.logout()
+
+    # #23 Resumen semanal: los lunes (hora Ecuador) suma los últimos 7 días
+    now = datetime.now(ECT)
+    if now.weekday() == 0:  # lunes
+        from datetime import date as _date
+        cutoff = (now.date() - timedelta(days=7)).isoformat()
+        week_total = 0.0
+        for d, a in re.findall(r"\['[^']*','(\d{4}-\d{2}-\d{2})','[\d:]{5}',[^\]]*?,(\d+\.\d{2}),'[^']*'\]", content):
+            if d >= cutoff:
+                week_total += float(a)
+        alerts.append({'title': '📊 Resumen semanal',
+                       'body': f'Gastaste ${week_total:.2f} en los últimos 7 días.',
+                       'tag': 'weekly'})
+
+    # #8/#23 Enviar notificaciones push (si están configurados los secrets)
+    try:
+        from send_push import send as send_push
+        send_push(alerts)
+    except Exception as _e:
+        print(f'  (aviso push: {_e})')
 
     total = len(new_produ) + len(new_bptc) + len(new_bpdeb)
     if total == 0:

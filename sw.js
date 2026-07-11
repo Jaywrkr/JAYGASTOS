@@ -1,5 +1,5 @@
 // Service worker mínimo para que JAYGASTOS sea instalable y abra offline.
-const CACHE = 'jaygastos-v1';
+const CACHE = 'jaygastos-v2';
 const ASSETS = ['./', './index.html', './icon.svg', './manifest.webmanifest'];
 
 self.addEventListener('install', e => {
@@ -11,6 +11,27 @@ self.addEventListener('activate', e => {
     caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
+});
+
+// Push: mostrar notificación
+self.addEventListener('push', e => {
+  let data = { title: 'JAYGASTOS', body: 'Nuevo movimiento' };
+  try { if (e.data) data = { ...data, ...e.data.json() }; } catch (_) {}
+  e.waitUntil(self.registration.showNotification(data.title, {
+    body: data.body,
+    icon: './icon.svg',
+    badge: './icon.svg',
+    tag: data.tag || 'jaygastos',
+    data: { url: './index.html' }
+  }));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(clients.matchAll({ type: 'window' }).then(list => {
+    for (const c of list) { if ('focus' in c) return c.focus(); }
+    if (clients.openWindow) return clients.openWindow('./index.html');
+  }));
 });
 
 // Network-first para index.html (datos frescos), cache-first para el resto.
