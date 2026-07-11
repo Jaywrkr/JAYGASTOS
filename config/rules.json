@@ -1,0 +1,31 @@
+{
+  "_comentario": "Edita este archivo para controlar cómo se muestran e importan los gastos. 'rename' cambia el nombre visible del comercio (busca el texto en MAYÚSCULA dentro del detalle crudo). 'categories' asigna categoría por palabra clave. Ambos se aplican en la próxima importación automática.",
+  "rename": {
+    "PAYPAL *STELLARWP": "StellarWP",
+    "PAYPAL *AIRBNB": "Airbnb",
+    "PAYPAL *HOSTINGER": "Hostinger",
+    "PAYPAL *PATREON": "Patreon",
+    "DL STARLINK": "Starlink",
+    "PEDIDOSYA PLUS": "PedidosYa Plus",
+    "PEDIDOSYA*KFC": "PedidosYa · KFC",
+    "PEDIDOSYA*KRISPY": "PedidosYa · Krispy Kreme",
+    "PEDIDOSYA*PAPA JOHN": "PedidosYa · Papa John's",
+    "GOOGLE *YOUTUBEPREMIUM": "YouTube Premium",
+    "GOOGLE ONE": "Google One",
+    "APPLE.COM/BILL": "Apple",
+    "PDFMONKEY": "PDFMonkey",
+    "MEGAMAXI": "Megamaxi",
+    "SUPERMAXI": "Supermaxi",
+    "TIPTI04": "Tipti",
+    "GASOLINERA GONZALEZ": "Gasolinera González"
+  },
+  "categories": {
+    "wayra": "entretenimiento",
+    "multicines": "entretenimiento",
+    "jugueton": "compras",
+    "kywi": "hogar",
+    "coralrio": "supermercado",
+    "bermeo": "compras",
+    "la rapida": "comida"
+  }
+}

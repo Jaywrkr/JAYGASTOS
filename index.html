@@ -81,6 +81,7 @@ input,select{font-family:inherit;}
 .tx-meta{font-size:10.5px;color:var(--text-dim);font-weight:600;margin-top:2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
 .acct-badge{font-size:9px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;padding:2px 6px;border-radius:5px;background:var(--card2);}
 .tx-note{font-size:9.5px;font-weight:800;letter-spacing:0.03em;text-transform:uppercase;color:var(--yellow);background:rgba(251,191,36,0.12);padding:2px 6px;border-radius:5px;}
+.tx-dup{font-size:9.5px;font-weight:800;letter-spacing:0.03em;text-transform:uppercase;color:var(--red);background:rgba(248,113,113,0.14);padding:2px 6px;border-radius:5px;}
 .tx-amt{font-size:14.5px;font-weight:800;flex-shrink:0;text-align:right;}
 .tx-row.excluded .tx-amt{text-decoration:line-through;}
 .tx-raw{font-size:10px;color:var(--text-dim2);font-weight:500;margin-top:1px;}
@@ -418,6 +419,11 @@ function renderGastos(){
   Object.keys(ACCTS).forEach(a=>acctTotals[a]=0);
   MTX.forEach(t=>{ if(!excluded.has(t.id)) acctTotals[t.acct]+=t.amt; });
 
+  // posibles duplicados: mismo día + cuenta + monto repetido dentro del mes
+  const dupCount = {};
+  MTX.forEach(t=>{ const k=`${t.date}|${t.acct}|${t.amt.toFixed(2)}`; dupCount[k]=(dupCount[k]||0)+1; });
+  const isDup = t => dupCount[`${t.date}|${t.acct}|${t.amt.toFixed(2)}`] > 1;
+
   // group by day
   const groups = {};
   tx.forEach(t=>{ (groups[t.date] = groups[t.date]||[]).push(t); });
@@ -481,6 +487,7 @@ function renderGastos(){
               <span>${t.time}</span>
               <span class="acct-badge" style="color:${acct.color}">${acct.short}</span>
               ${t.note ? `<span class="tx-note">${t.note}</span>` : ''}
+              ${isDup(t) ? `<span class="tx-dup">⚠ posible duplicado</span>` : ''}
             </div>
             <div class="tx-raw">${t.raw}</div>
           </div>

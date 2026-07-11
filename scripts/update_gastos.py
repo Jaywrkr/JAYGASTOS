@@ -10,6 +10,9 @@ Bancos soportados:
 import imaplib
 import email
 import email.utils
+import email.header
+import json
+import urllib.request
 import re
 import os
 import sys
@@ -67,12 +70,60 @@ MERCHANT_CATS = {
     'hm':'compras','h&m':'compras','ecuavapes':'compras','libreria':'compras','librería':'compras',
 }
 
+# Reglas editables desde config/rules.json (rename de comercios + categorías extra)
+RULES = {'rename': {}, 'categories': {}}
+try:
+    _rules_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'rules.json')
+    with open(_rules_path, encoding='utf-8') as _f:
+        _loaded = json.load(_f)
+        RULES['rename'] = _loaded.get('rename', {})
+        RULES['categories'] = _loaded.get('categories', {})
+        # Las categorías del config tienen prioridad sobre las por defecto
+        MERCHANT_CATS = {**MERCHANT_CATS, **RULES['categories']}
+except Exception as _e:
+    print(f'  (aviso: no se pudo leer config/rules.json: {_e})')
+
 def guess_cat(merchant: str) -> str:
     low = merchant.lower()
     for kw, cat in MERCHANT_CATS.items():
         if kw in low:
             return cat
     return 'compras'
+
+def apply_rename(est: str, raw: str) -> str:
+    """Si el detalle crudo contiene una clave de 'rename', usa el nombre bonito."""
+    up = raw.upper()
+    for key, nice in RULES['rename'].items():
+        if key.upper() in up:
+            return nice
+    return est
+
+_fx_cache = {}
+def eur_to_usd(date_s: str) -> float:
+    """Tasa EUR→USD del día (histórica). Cachea y hace fallback si no hay red."""
+    if date_s in _fx_cache:
+        return _fx_cache[date_s]
+    rate = 1.08  # fallback razonable
+    try:
+        url = f'https://api.frankfurter.app/{date_s}?from=EUR&to=USD'
+        with urllib.request.urlopen(url, timeout=8) as r:
+            rate = json.loads(r.read())['rates']['USD']
+    except Exception as e:
+        print(f'  (aviso: no se pudo obtener tasa EUR→USD, uso {rate}: {e})')
+    _fx_cache[date_s] = rate
+    return rate
+
+def decode_mime_header(raw: str) -> str:
+    """Decodifica encabezados MIME (=?UTF-8?...?=) a texto plano."""
+    if not raw:
+        return ''
+    out = []
+    for part, enc in email.header.decode_header(raw):
+        if isinstance(part, bytes):
+            out.append(part.decode(enc or 'utf-8', errors='replace'))
+        else:
+            out.append(part)
+    return ''.join(out)
 
 def strip_html(h: str) -> str:
     text = re.sub(r'<[^>]+>', ' ', h)
@@ -105,7 +156,7 @@ def parse_produ(html_body: str, email_date: datetime) -> dict | None:
     #   "07/01/2026 12:41"     (MM/DD/YYYY numérico)
     m_date = re.search(r'Fecha y Hora:\s*(\S+)\s+(\d{1,2}:\d{2})', text)
     # Monto puede venir en USD o EUR
-    m_amt  = re.search(r'Valor:\s*(?:USD|EUR|\$)?\s*([\d,]+\.?\d*)', text)
+    m_amt  = re.search(r'Valor:\s*(USD|EUR|\$)?\s*([\d,]+\.?\d*)', text)
     m_est  = re.search(r'Establecimiento:\s*(.+?)(?:Atentamente|Produbanco|$)', text)
     if not (m_date and m_amt and m_est):
         return None
@@ -123,11 +174,17 @@ def parse_produ(html_body: str, email_date: datetime) -> dict | None:
     else:
         return None
     date_s = f'{year}-{mon:02d}-{day:02d}'
-    amt = float(m_amt.group(1).replace(',', ''))
+    currency = m_amt.group(1)
+    amt = float(m_amt.group(2).replace(',', ''))
+    note = None
+    if currency == 'EUR':
+        eur = amt
+        amt = round(eur * eur_to_usd(date_s), 2)
+        note = f'€{eur:.2f} ≈ ${amt:.2f}'
     merchant = clean_merchant(m_est.group(1))
     cat = guess_cat(merchant)
     return {'acct':'produ-tc','date':date_s,'time':time_s,
-            'est':merchant.title(),'raw':merchant.upper(),'amt':amt,'cat':cat}
+            'est':apply_rename(merchant.title(), merchant.upper()),'raw':merchant.upper(),'amt':amt,'cat':cat,'note':note}
 
 def parse_bp_tc(html_body: str, email_date: datetime) -> dict | None:
     text = strip_html(html_body)
@@ -142,7 +199,7 @@ def parse_bp_tc(html_body: str, email_date: datetime) -> dict | None:
     merchant = clean_merchant(m_est.group(1))
     cat = guess_cat(merchant)
     return {'acct':'bp-tc','date':date_s,'time':time_s,
-            'est':merchant.title(),'raw':merchant.upper(),'amt':amt,'cat':cat}
+            'est':apply_rename(merchant.title(), merchant.upper()),'raw':merchant.upper(),'amt':amt,'cat':cat}
 
 def parse_bp_retiro(html_body: str, email_date: datetime) -> dict | None:
     text = strip_html(html_body)
@@ -213,10 +270,19 @@ def fetch_emails(imap, since_imap: str, sender: str) -> list[dict]:
                 'msg_id': msg_id,
                 'email_date': email_date,
                 'html_body': html_body,
-                'subject': msg.get('Subject', ''),
+                'subject': decode_mime_header(msg.get('Subject', '')),
             })
         break  # found emails in this folder, don't check next
     return results
+
+def make_line(tid: str, tx: dict) -> str:
+    """Arma la fila JS. Escapa comillas simples y agrega nota opcional (8º campo)."""
+    def esc(s): return str(s).replace("'", "’")
+    row = f"['{tid}','{tx['date']}','{tx['time']}','{esc(tx['est'])}','{esc(tx['raw'])}',{tx['amt']:.2f},'{tx['cat']}'"
+    note = tx.get('note')
+    if note:
+        row += f",'{esc(note)}'"
+    return row + '],'
 
 def insert_into_array(content: str, array_name: str, lines: list[str]) -> str:
     if not lines:
@@ -273,7 +339,7 @@ def main():
             if (tx['date'], f"{tx['amt']:.2f}") in existing:
                 processed.add(e['msg_id']); continue
             tid = tx_id(tx['acct'], tx['date'], tx['time'], tx['amt'])
-            line = f"['{tid}','{tx['date']}','{tx['time']}','{tx['est']}','{tx['raw']}',{tx['amt']:.2f},'{tx['cat']}'],"
+            line = make_line(tid, tx)
             new_produ.append(line)
             existing.add((tx['date'], f"{tx['amt']:.2f}"))
             processed.add(e['msg_id'])
@@ -288,7 +354,7 @@ def main():
             if (tx['date'], f"{tx['amt']:.2f}") in existing:
                 processed.add(e['msg_id']); continue
             tid = tx_id(tx['acct'], tx['date'], tx['time'], tx['amt'])
-            line = f"['{tid}','{tx['date']}','{tx['time']}','{tx['est']}','{tx['raw']}',{tx['amt']:.2f},'{tx['cat']}'],"
+            line = make_line(tid, tx)
             new_bptc.append(line)
             existing.add((tx['date'], f"{tx['amt']:.2f}"))
             processed.add(e['msg_id'])
@@ -309,7 +375,7 @@ def main():
             if (tx['date'], f"{tx['amt']:.2f}") in existing:
                 processed.add(e['msg_id']); continue
             tid = tx_id(tx['acct'], tx['date'], tx['time'], tx['amt'])
-            line = f"['{tid}','{tx['date']}','{tx['time']}','{tx['est']}','{tx['raw']}',{tx['amt']:.2f},'{tx['cat']}'],"
+            line = make_line(tid, tx)
             new_bpdeb.append(line)
             existing.add((tx['date'], f"{tx['amt']:.2f}"))
             processed.add(e['msg_id'])
