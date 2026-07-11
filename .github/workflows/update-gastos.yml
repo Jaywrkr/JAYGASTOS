@@ -21,10 +21,16 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Instalar dependencias
+        run: pip install --quiet pywebpush
+
       - name: Actualizar gastos desde Gmail
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          PUSH_SUBSCRIPTION: ${{ secrets.PUSH_SUBSCRIPTION }}
+          VAPID_PRIVATE: ${{ secrets.VAPID_PRIVATE }}
+          PUSH_MIN: '100'
         run: python scripts/update_gastos.py
 
       - name: Commit y push si hay cambios
