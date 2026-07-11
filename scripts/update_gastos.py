@@ -201,6 +201,19 @@ def parse_bp_tc(html_body: str, email_date: datetime) -> dict | None:
     return {'acct':'bp-tc','date':date_s,'time':time_s,
             'est':apply_rename(merchant.title(), merchant.upper()),'raw':merchant.upper(),'amt':amt,'cat':cat}
 
+def parse_refund(html_body: str, email_date: datetime, acct: str) -> dict | None:
+    """#58 Reembolso/devolución/nota de crédito → monto NEGATIVO, categoría 'reembolso'."""
+    text = strip_html(html_body)
+    m_amt = re.search(r'(?:Valor|Monto|por)\s*:?\s*(?:USD|\$)?\s*([\d,]+\.\d{2})', text)
+    m_est = re.search(r'(?:Establecimiento|Comercio|Concepto)\s*:?\s*(.+?)(?:Fecha|Valor|Monto|$)', text)
+    if not m_amt:
+        return None
+    amt = -abs(float(m_amt.group(1).replace(',', '')))
+    est = clean_merchant(m_est.group(1)) if m_est else 'Reembolso'
+    dt = email_date.astimezone(ECT)
+    return {'acct':acct,'date':dt.strftime('%Y-%m-%d'),'time':dt.strftime('%H:%M'),
+            'est':f'Reembolso · {est}','raw':f'REEMBOLSO {est.upper()}','amt':amt,'cat':'reembolso'}
+
 def parse_bp_retiro(html_body: str, email_date: datetime) -> dict | None:
     text = strip_html(html_body)
     m_amt = re.search(r'Monto:\s*\$([\d,]+\.?\d*)', text)
@@ -321,75 +334,71 @@ def main():
 
     # Firmas (fecha, monto) de transacciones ya presentes, para evitar duplicados
     existing = set()
-    for row in re.findall(r"\['[^']*','(\d{4}-\d{2}-\d{2})','[\d:]{5}',[^\]]*?,(\d+\.\d{2}),'[^']*'\]", content):
+    for row in re.findall(r"\['[^']*','(\d{4}-\d{2}-\d{2})','[\d:]{5}',[^\]]*?,(-?\d+\.\d{2}),'[^']*'\]", content):
         existing.add((row[0], row[1]))
 
     # Connect IMAP
     imap = imaplib.IMAP4_SSL('imap.gmail.com')
     imap.login(GMAIL_USER, GMAIL_PASS)
 
-    new_produ, new_bptc, new_bpdeb = [], [], []
+    new_lines = {'produ-tc': [], 'bp-tc': [], 'bp-deb': []}
+    ARRAY_OF = {'produ-tc': 'TX_PRODU', 'bp-tc': 'TX_BP', 'bp-deb': 'TX_BPD'}
     alerts = []  # notificaciones push a enviar
     PUSH_MIN = float(os.environ.get('PUSH_MIN', '100'))
+
+    # #35 Historial de montos por comercio (de las filas ya presentes) para detectar anomalías
+    hist = {}
+    for est_raw, amt_raw in re.findall(r"\['[^']*','[\d-]{10}','[\d:]{5}','([^']*)','[^']*',(-?\d+\.\d{2}),", content):
+        hist.setdefault(est_raw.strip().lower(), []).append(float(amt_raw))
+
     def maybe_alert(tx):
         if tx['amt'] >= PUSH_MIN:
             alerts.append({'title': '💸 Gasto grande',
-                           'body': f"{tx['est']} · ${tx['amt']:.2f}",
-                           'tag': 'big-expense'})
+                           'body': f"{tx['est']} · ${tx['amt']:.2f}", 'tag': 'big-expense'})
+        h = hist.get(tx['est'].strip().lower(), [])
+        if len(h) >= 3:
+            avg = sum(h) / len(h)
+            if tx['amt'] > max(max(h) * 1.6, avg * 2) and tx['amt'] >= 5:
+                alerts.append({'title': '⚠️ Gasto inusual',
+                               'body': f"{tx['est']} ${tx['amt']:.2f} (normalmente ~${avg:.2f})",
+                               'tag': 'anomaly'})
 
-    # --- Produbanco ---
-    for e in fetch_emails(imap, since_imap, 'bancaenlinea@produbanco.com'):
-        if e['msg_id'] in processed:
-            continue
-        tx = parse_produ(e['html_body'], e['email_date'])
-        if tx and tx['date'].startswith(month_prefix):
-            if (tx['date'], f"{tx['amt']:.2f}") in existing:
-                processed.add(e['msg_id']); continue
-            tid = tx_id(tx['acct'], tx['date'], tx['time'], tx['amt'])
-            line = make_line(tid, tx)
-            new_produ.append(line)
-            existing.add((tx['date'], f"{tx['amt']:.2f}"))
-            maybe_alert(tx)
-            processed.add(e['msg_id'])
-            print(f"  + Produbanco: {tx['date']} {tx['est']} ${tx['amt']:.2f}")
-
-    # --- Pacífico TC ---
-    for e in fetch_emails(imap, since_imap, 'notificaciones@infopacificard.com.ec'):
-        if e['msg_id'] in processed:
-            continue
-        tx = parse_bp_tc(e['html_body'], e['email_date'])
-        if tx and tx['date'].startswith(month_prefix):
-            if (tx['date'], f"{tx['amt']:.2f}") in existing:
-                processed.add(e['msg_id']); continue
-            tid = tx_id(tx['acct'], tx['date'], tx['time'], tx['amt'])
-            line = make_line(tid, tx)
-            new_bptc.append(line)
-            existing.add((tx['date'], f"{tx['amt']:.2f}"))
-            maybe_alert(tx)
-            processed.add(e['msg_id'])
-            print(f"  + BP TC: {tx['date']} {tx['est']} ${tx['amt']:.2f}")
-
-    # --- Pacífico Débito ---
-    for e in fetch_emails(imap, since_imap, 'intermail@bancopacifico.ec'):
-        if e['msg_id'] in processed:
-            continue
+    def route_debito(e):
         subj = e['subject'].lower()
         if 'retiro sin tarjeta' in subj:
-            tx = parse_bp_retiro(e['html_body'], e['email_date'])
-        elif 'envío de dinero' in subj or 'envio de dinero' in subj:
-            tx = parse_bp_transfer(e['html_body'], e['email_date'])
-        else:
-            continue
-        if tx and tx['date'].startswith(month_prefix):
+            return parse_bp_retiro(e['html_body'], e['email_date'])
+        if 'envío de dinero' in subj or 'envio de dinero' in subj:
+            return parse_bp_transfer(e['html_body'], e['email_date'])
+        if 'nota de' in subj or 'reverso' in subj or 'devoluci' in subj:  # #58 reembolsos
+            return parse_refund(e['html_body'], e['email_date'], 'bp-deb')
+        return None
+
+    # #57 Registro de bancos: para agregar uno nuevo, añade una entrada aquí
+    #     con su remitente, su parser y la etiqueta a imprimir.
+    SOURCES = [
+        {'sender': 'bancaenlinea@produbanco.com',
+         'parse': lambda e: parse_produ(e['html_body'], e['email_date']), 'label': 'Produbanco'},
+        {'sender': 'notificaciones@infopacificard.com.ec',
+         'parse': lambda e: parse_bp_tc(e['html_body'], e['email_date']), 'label': 'BP TC'},
+        {'sender': 'intermail@bancopacifico.ec',
+         'parse': route_debito, 'label': 'BP Déb'},
+    ]
+
+    for src in SOURCES:
+        for e in fetch_emails(imap, since_imap, src['sender']):
+            if e['msg_id'] in processed:
+                continue
+            tx = src['parse'](e)
+            if not (tx and tx['date'].startswith(month_prefix)):
+                continue
             if (tx['date'], f"{tx['amt']:.2f}") in existing:
                 processed.add(e['msg_id']); continue
             tid = tx_id(tx['acct'], tx['date'], tx['time'], tx['amt'])
-            line = make_line(tid, tx)
-            new_bpdeb.append(line)
+            new_lines[tx['acct']].append(make_line(tid, tx))
             existing.add((tx['date'], f"{tx['amt']:.2f}"))
             maybe_alert(tx)
             processed.add(e['msg_id'])
-            print(f"  + BP Déb: {tx['date']} {tx['est']} ${tx['amt']:.2f}")
+            print(f"  + {src['label']}: {tx['date']} {tx['est']} ${tx['amt']:.2f}")
 
     imap.logout()
 
@@ -399,12 +408,32 @@ def main():
         from datetime import date as _date
         cutoff = (now.date() - timedelta(days=7)).isoformat()
         week_total = 0.0
-        for d, a in re.findall(r"\['[^']*','(\d{4}-\d{2}-\d{2})','[\d:]{5}',[^\]]*?,(\d+\.\d{2}),'[^']*'\]", content):
+        for d, a in re.findall(r"\['[^']*','(\d{4}-\d{2}-\d{2})','[\d:]{5}',[^\]]*?,(-?\d+\.\d{2}),'[^']*'\]", content):
             if d >= cutoff:
                 week_total += float(a)
         alerts.append({'title': '📊 Resumen semanal',
                        'body': f'Gastaste ${week_total:.2f} en los últimos 7 días.',
                        'tag': 'weekly'})
+
+    # #37 Resumen mensual automático: el día 1 compara el mes anterior vs. el previo
+    if now.day == 1:
+        def month_total(ym):
+            tot = 0.0
+            for d, a in re.findall(r"\['[^']*','(\d{4}-\d{2})-\d{2}','[\d:]{5}',[^\]]*?,(-?\d+\.\d{2}),'[^']*'\]", content):
+                if d == ym:
+                    tot += float(a)
+            return tot
+        prev = (now.replace(day=1) - timedelta(days=1))
+        prev_ym = f'{prev.year}-{prev.month:02d}'
+        prev2 = (prev.replace(day=1) - timedelta(days=1))
+        prev2_ym = f'{prev2.year}-{prev2.month:02d}'
+        t1, t2 = month_total(prev_ym), month_total(prev2_ym)
+        diff = t1 - t2
+        signo = '↑' if diff > 0 else '↓'
+        cuerpo = f'{MONTHS_ES_SHORT[prev.month-1]}: ${t1:.2f}'
+        if t2 > 0:
+            cuerpo += f' ({signo} ${abs(diff):.2f} vs mes previo)'
+        alerts.append({'title': '📅 Cierre de mes', 'body': cuerpo, 'tag': 'monthly'})
 
     # #8/#23 Enviar notificaciones push (si están configurados los secrets)
     try:
@@ -413,15 +442,14 @@ def main():
     except Exception as _e:
         print(f'  (aviso push: {_e})')
 
-    total = len(new_produ) + len(new_bptc) + len(new_bpdeb)
+    total = sum(len(v) for v in new_lines.values())
     if total == 0:
         print("Sin transacciones nuevas.")
         sys.exit(0)
 
     # Insert into TX arrays
-    content = insert_into_array(content, 'TX_PRODU', new_produ)
-    content = insert_into_array(content, 'TX_BP', new_bptc)
-    content = insert_into_array(content, 'TX_BPD', new_bpdeb)
+    for acct, arr_name in ARRAY_OF.items():
+        content = insert_into_array(content, arr_name, new_lines[acct])
 
     # Update/insert processed IDs comment
     proc_str = ','.join(sorted(processed))
