@@ -65,6 +65,9 @@ input,select{font-family:inherit;}
 .filters select{flex:0 0 auto;}
 .filters input{flex:1;min-width:120px;}
 .filters select:focus,.filters input:focus{outline:none;border-color:var(--violet);}
+.search-all{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--text-dim);white-space:nowrap;cursor:pointer;}
+.search-all input{width:15px;height:15px;accent-color:var(--violet);}
+.search-hint{font-size:11px;font-weight:700;color:var(--violet);background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);border-radius:10px;padding:9px 12px;margin-bottom:14px;}
 
 /* DAY GROUP */
 .day-group{margin-bottom:18px;}
@@ -122,6 +125,9 @@ input,select{font-family:inherit;}
 .chart-budget-line{position:absolute;left:0;right:0;border-top:2px dashed var(--text-dim2);}
 .chart-bar{flex:1;background:var(--violet);border-radius:3px 3px 0 0;min-height:2px;opacity:0.85;}
 .chart-bar.today{background:var(--green);opacity:1;}
+.chart-bar.peak{background:var(--red);opacity:1;}
+.insight-line{font-size:12px;font-weight:700;color:var(--text-dim);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 13px;margin:4px 0 6px;}
+.insight-line b{color:var(--text);}
 .chart-x{display:flex;justify-content:space-between;font-size:9px;color:var(--text-dim2);font-weight:700;margin-top:6px;}
 
 .cat-row{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:7px;}
@@ -378,6 +384,7 @@ let view = 'gastos';
 let filterAcct = 'all';
 let filterCat = 'all';
 let filterSearch = '';
+let searchAll = false;   // #6 buscar en todos los meses
 
 function saveExcluded(){ localStorage.setItem(LS_EXC, JSON.stringify([...excluded])); }
 function saveFijos(){ localStorage.setItem(LS_FIJOS, JSON.stringify(fijos)); }
@@ -401,7 +408,8 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
 
 /* ===================== RENDER: GASTOS ===================== */
 function filteredTx(){
-  return MTX.filter(t=>{
+  const base = (searchAll && filterSearch) ? TRANSACTIONS : MTX;
+  return base.filter(t=>{
     if(filterAcct!=='all' && t.acct!==filterAcct) return false;
     if(filterCat!=='all' && t.cat!==filterCat) return false;
     if(filterSearch && !(t.est+t.raw).toLowerCase().includes(filterSearch.toLowerCase())) return false;
@@ -460,7 +468,9 @@ function renderGastos(){
       ${Object.keys(CATS).map(c=>`<option value="${c}" ${filterCat===c?'selected':''}>${CATS[c].icon} ${CATS[c].label}</option>`).join('')}
     </select>
     <input type="text" id="fSearch" placeholder="Buscar establecimiento..." value="${filterSearch}">
+    <label class="search-all"><input type="checkbox" id="fAll" ${searchAll?'checked':''}> Todos los meses</label>
   </div>
+  ${(searchAll && filterSearch) ? `<div class="search-hint">🔎 Buscando "${filterSearch}" en todos los meses · ${tx.length} resultado${tx.length!==1?'s':''} · ${fmt(total)}</div>` : ''}
   `;
 
   if(dates.length===0){
@@ -503,6 +513,7 @@ function renderGastos(){
   document.getElementById('fAcct').addEventListener('change', e=>{ filterAcct=e.target.value; render(); });
   document.getElementById('fCat').addEventListener('change', e=>{ filterCat=e.target.value; render(); });
   document.getElementById('fSearch').addEventListener('input', e=>{ filterSearch=e.target.value; render(); });
+  document.getElementById('fAll').addEventListener('change', e=>{ searchAll=e.target.checked; render(); });
   document.querySelectorAll('.tx-check').forEach(cb=>{
     cb.addEventListener('change', e=>{
       const id = e.target.dataset.id;
@@ -591,6 +602,22 @@ function renderFijos(){
   });
 }
 
+/* #3 Suscripciones recurrentes: mismo comercio en 2+ meses distintos */
+function recurringSubs(){
+  const map = {};
+  TRANSACTIONS.forEach(t=>{
+    const key = t.est.trim().toLowerCase();
+    (map[key] = map[key] || {est:t.est, cat:t.cat, months:new Set(), amts:[]});
+    map[key].months.add(t.date.slice(0,7));
+    map[key].amts.push(t.amt);
+  });
+  return Object.values(map)
+    .filter(s=>s.months.size >= 2)
+    .map(s=>({est:s.est, cat:s.cat, count:s.months.size,
+              amt: s.amts.reduce((a,b)=>a+b,0)/s.amts.length}))
+    .sort((a,b)=> b.count-a.count || b.amt-a.amt);
+}
+
 /* ===================== RENDER: ANALISIS ===================== */
 function renderAnalisis(){
   const realSpend = MTX.reduce((s,t)=> excluded.has(t.id) ? s : s+t.amt, 0);
@@ -634,6 +661,28 @@ function renderAnalisis(){
   const catList = Object.keys(catTotals).map(c=>({c, amt:catTotals[c]})).sort((a,b)=>b.amt-a.amt);
   const maxCat = catList.length ? catList[0].amt : 1;
 
+  // #11 día más caro
+  let maxDayIdx = 0;
+  dailySpend.forEach((v,i)=>{ if(v > dailySpend[maxDayIdx]) maxDayIdx = i; });
+  const costliestDay = dailySpend[maxDayIdx];
+  const costliestLabel = new Date(`${curMonth}-${String(maxDayIdx+1).padStart(2,'0')}T00:00:00`)
+    .toLocaleDateString('es-EC',{weekday:'long', day:'numeric', month:'long'});
+
+  // #12 ranking de comercios del mes
+  const merchTotals = {};
+  MTX.forEach(t=>{ if(excluded.has(t.id)) return; merchTotals[t.est]=(merchTotals[t.est]||0)+t.amt; });
+  const merchList = Object.keys(merchTotals).map(m=>({m, amt:merchTotals[m]})).sort((a,b)=>b.amt-a.amt).slice(0,8);
+  const maxMerch = merchList.length ? merchList[0].amt : 1;
+
+  // #25 meta de ahorro (tope de gasto) editable por mes
+  const LS_GOAL = 'jay_exp_goal_' + curMonth.replace('-','_');
+  const goal = parseFloat(localStorage.getItem(LS_GOAL)) || fijosTotal;
+  const goalPct = Math.min(100, (realSpend/goal)*100);
+  const goalOver = realSpend > goal;
+
+  // #3 suscripciones recurrentes
+  const subs = recurringSubs();
+
   let html = `
   <div class="page-head">
     <div>
@@ -656,14 +705,40 @@ function renderAnalisis(){
     <div class="stat-card"><div class="stat-label">Margen diario</div><div class="stat-value">${fmt(dailyAllowance)}</div></div>
   </div>
 
-  <div class="section-title">Gasto diario · junio</div>
+  <div class="section-title">Meta de gasto del mes</div>
+  <div class="banner ${goalOver?'over':'ok'}">
+    <div class="banner-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>${goalOver?'Meta superada':'Dentro de la meta'}</span>
+      <span style="font-size:12px;">$<input type="number" id="goalInput" value="${goal.toFixed(0)}" style="width:80px;background:var(--card2);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;font-weight:800;padding:4px 8px;text-align:right;"></span>
+    </div>
+    <div class="bar-track"><div class="bar-fill" style="width:${goalPct}%;background:${goalOver?'var(--red)':'var(--green)'}"></div></div>
+    <div class="bar-labels"><span>${fmt(realSpend)} gastado</span><span>${goalOver?fmt(realSpend-goal)+' sobre la meta':fmt(goal-realSpend)+' disponible'}</span></div>
+  </div>
+
+  <div class="section-title">Gasto diario · ${monthLabel(curMonth)}</div>
   <div class="chart-wrap">
     <div class="chart-bars">
       <div class="chart-budget-line" style="bottom:${(dailyAvg/maxDay)*100}%"></div>
-      ${dailySpend.map((v,i)=>`<div class="chart-bar ${i+1===TODAY?'today':''}" style="height:${Math.max(2,(v/maxDay)*100)}%" title="Día ${i+1}: ${fmt(v)}"></div>`).join('')}
+      ${dailySpend.map((v,i)=>`<div class="chart-bar ${(curMonth===REAL_MONTH && i+1===TODAY)?'today':''} ${i===maxDayIdx&&costliestDay>0?'peak':''}" style="height:${Math.max(2,(v/maxDay)*100)}%" title="Día ${i+1}: ${fmt(v)}"></div>`).join('')}
     </div>
-    <div class="chart-x"><span>1</span><span>10</span><span>20</span><span>30</span></div>
+    <div class="chart-x"><span>1</span><span>10</span><span>20</span><span>${DAYS_IN_MONTH}</span></div>
   </div>
+  ${costliestDay>0 ? `<div class="insight-line">🔥 Día más caro: <b>${costliestLabel}</b> · ${fmt(costliestDay)}</div>` : ''}
+
+  <div class="section-title">Top comercios del mes</div>
+  ${merchList.length ? merchList.map(item=>`<div class="cat-row">
+      <span class="cat-name" style="flex:1;">${item.m}</span>
+      <div class="cat-bar-track"><div class="cat-bar-fill" style="width:${(item.amt/maxMerch)*100}%;background:var(--violet)"></div></div>
+      <span class="cat-amt">${fmt(item.amt)}</span>
+    </div>`).join('') : `<div class="empty">Sin datos este mes.</div>`}
+
+  ${subs.length ? `<div class="section-title">🔁 Suscripciones recurrentes detectadas</div>
+  ${subs.slice(0,12).map(s=>`<div class="cat-row">
+      <span class="cat-icon">${CATS[s.cat]?CATS[s.cat].icon:'🔁'}</span>
+      <span class="cat-name" style="flex:1;">${s.est} <span style="color:var(--text-dim2);font-weight:600;">· ${s.count} meses</span></span>
+      <span class="cat-amt">${fmt(s.amt)}</span>
+    </div>`).join('')}
+  <div class="insight-line">Estimado recurrente: <b>${fmt(subs.reduce((a,s)=>a+s.amt,0))}</b> / mes aprox.</div>` : ''}
 
   <div class="section-title">Categorías principales</div>
   ${catList.map(item=>{
@@ -678,6 +753,12 @@ function renderAnalisis(){
   `;
 
   document.getElementById('app').innerHTML = html;
+
+  const gi = document.getElementById('goalInput');
+  if(gi) gi.addEventListener('change', e=>{
+    const v = parseFloat(e.target.value);
+    if(v>0){ localStorage.setItem(LS_GOAL, v); toast('✓ Meta actualizada'); render(); }
+  });
 }
 
 /* ===================== PNG EXPORT ===================== */
