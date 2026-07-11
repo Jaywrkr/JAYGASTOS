@@ -59,6 +59,12 @@ input,select{font-family:inherit;}
 .icon-btn.spinning .spin-ic{display:inline-block;animation:spin 0.8s linear infinite;}
 @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
 
+/* WIDGETS */
+.widget-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
+.widget{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;text-align:center;}
+.widget-label{font-size:9.5px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;}
+.widget-value{font-size:18px;font-weight:900;}
+
 /* TOTAL CARD */
 .total-card{background:linear-gradient(145deg,var(--card2),var(--card));border:1px solid var(--border2);border-radius:18px;padding:22px;margin-bottom:16px;}
 .total-label{font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;}
@@ -87,6 +93,8 @@ input,select{font-family:inherit;}
 .tx-row.excluded{opacity:0.4;}
 .tx-check{flex-shrink:0;width:18px;height:18px;accent-color:var(--violet);cursor:pointer;}
 .tx-cat-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.tx-catsel{font-size:9.5px;font-weight:700;background:var(--card2);color:var(--text-dim);border:1px solid var(--border2);border-radius:5px;padding:1px 4px;max-width:130px;}
+.tx-catsel:focus{outline:none;border-color:var(--violet);}
 .tx-mid{flex:1;min-width:0;}
 .tx-est{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .tx-meta{font-size:10.5px;color:var(--text-dim);font-weight:600;margin-top:2px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
@@ -136,6 +144,10 @@ input,select{font-family:inherit;}
 .chart-bar.peak{background:var(--red);opacity:1;}
 .insight-line{font-size:12px;font-weight:700;color:var(--text-dim);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 13px;margin:4px 0 6px;}
 .insight-line b{color:var(--text);}
+.donut-wrap{display:flex;align-items:center;gap:18px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;flex-wrap:wrap;}
+.donut{width:140px;height:140px;flex-shrink:0;}
+.donut-legend{flex:1;min-width:140px;display:flex;flex-direction:column;gap:6px;}
+.donut-leg{font-size:11.5px;font-weight:700;color:var(--text-dim);display:flex;align-items:center;gap:7px;}
 .chart-x{display:flex;justify-content:space-between;font-size:9px;color:var(--text-dim2);font-weight:700;margin-top:6px;}
 
 .cat-row{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:7px;}
@@ -392,6 +404,19 @@ function buildTx(rows, acct){
 }
 const TRANSACTIONS = [...buildTx(TX_PRODU,'produ-tc'), ...buildTx(TX_BP,'bp-tc'), ...buildTx(TX_BPD,'bp-deb')];
 
+/* #33 Reglas aprendidas: comercio → categoría (persisten y aplican a todos los meses) */
+let catRules = JSON.parse(localStorage.getItem('jay_exp_catrules') || '{}');
+function catKey(est){ return est.trim().toLowerCase(); }
+function applyCatRules(){ TRANSACTIONS.forEach(t=>{ const r=catRules[catKey(t.est)]; if(r && CATS[r]) t.cat=r; }); }
+function setTxCategory(est, newCat){
+  catRules[catKey(est)] = newCat;
+  localStorage.setItem('jay_exp_catrules', JSON.stringify(catRules));
+  applyCatRules();
+  toast('✓ Categoría guardada para «'+est+'»');
+  render();
+}
+applyCatRules();
+
 const FIJOS_DEFAULT = [
   {id:'f1', name:'Luca', amt:750},
   {id:'f2', name:'Limpieza', amt:80},
@@ -485,6 +510,16 @@ function renderGastos(){
   MTX.forEach(t=>{ const k=`${t.date}|${t.acct}|${t.amt.toFixed(2)}`; dupCount[k]=(dupCount[k]||0)+1; });
   const isDup = t => dupCount[`${t.date}|${t.acct}|${t.amt.toFixed(2)}`] > 1;
 
+  // #52 widgets resumen: hoy / semana / mes
+  const _today = new Date();
+  const todayStr = `${_today.getFullYear()}-${String(_today.getMonth()+1).padStart(2,'0')}-${String(_today.getDate()).padStart(2,'0')}`;
+  const weekAgo = new Date(_today.getTime() - 6*86400000);
+  const weekStr = `${weekAgo.getFullYear()}-${String(weekAgo.getMonth()+1).padStart(2,'0')}-${String(weekAgo.getDate()).padStart(2,'0')}`;
+  const notExc = t => !excluded.has(t.id);
+  const spentToday = TRANSACTIONS.filter(t=>notExc(t)&&t.date===todayStr).reduce((s,t)=>s+t.amt,0);
+  const spentWeek = TRANSACTIONS.filter(t=>notExc(t)&&t.date>=weekStr&&t.date<=todayStr).reduce((s,t)=>s+t.amt,0);
+  const spentMonth = MTX.reduce((s,t)=> notExc(t) ? s+t.amt : s, 0);
+
   // group by day
   const groups = {};
   tx.forEach(t=>{ (groups[t.date] = groups[t.date]||[]).push(t); });
@@ -500,6 +535,12 @@ function renderGastos(){
       <button class="icon-btn" id="syncBtn"><span class="spin-ic">↻</span> Revisar correos</button>
       <button class="icon-btn" id="pngBtn">↓ PNG</button>
     </div>
+  </div>
+
+  <div class="widget-row">
+    <div class="widget"><div class="widget-label">Hoy</div><div class="widget-value">${fmt(spentToday)}</div></div>
+    <div class="widget"><div class="widget-label">7 días</div><div class="widget-value">${fmt(spentWeek)}</div></div>
+    <div class="widget"><div class="widget-label">Mes</div><div class="widget-value">${fmt(spentMonth)}</div></div>
   </div>
 
   <div class="total-card">
@@ -549,6 +590,9 @@ function renderGastos(){
             <div class="tx-meta">
               <span>${t.time}</span>
               <span class="acct-badge" style="color:${acct.color}">${acct.short}</span>
+              <select class="tx-catsel" data-est="${t.est.replace(/"/g,'&quot;')}" title="Cambiar categoría">
+                ${Object.keys(CATS).map(c=>`<option value="${c}" ${t.cat===c?'selected':''}>${CATS[c].icon} ${CATS[c].label}</option>`).join('')}
+              </select>
               ${t.note ? `<span class="tx-note">${t.note}</span>` : ''}
               ${isDup(t) ? `<span class="tx-dup">⚠ posible duplicado</span>` : ''}
             </div>
@@ -567,6 +611,10 @@ function renderGastos(){
   document.getElementById('fCat').addEventListener('change', e=>{ filterCat=e.target.value; render(); });
   document.getElementById('fSearch').addEventListener('input', e=>{ filterSearch=e.target.value; render(); });
   document.getElementById('fAll').addEventListener('change', e=>{ searchAll=e.target.checked; render(); });
+  document.querySelectorAll('.tx-catsel').forEach(sel=>{
+    sel.addEventListener('change', e=>{ setTxCategory(e.target.dataset.est, e.target.value); });
+    sel.addEventListener('click', e=>e.stopPropagation());
+  });
   document.querySelectorAll('.tx-check').forEach(cb=>{
     cb.addEventListener('change', e=>{
       const id = e.target.dataset.id;
@@ -736,6 +784,25 @@ function renderAnalisis(){
   // #3 suscripciones recurrentes
   const subs = recurringSubs();
 
+  // #46 racha de días bajo el presupuesto diario (desde el día más reciente hacia atrás)
+  let streak = 0;
+  for(let i = TODAY-1; i >= 0; i--){
+    if(dailySpend[i] <= dailyAvg) streak++; else break;
+  }
+
+  // #53 dona por categoría (segmentos SVG)
+  const donutTotal = catList.reduce((s,c)=>s+c.amt,0) || 1;
+  let _acc = 0;
+  const R = 52, C = 2*Math.PI*R;
+  const donutSegs = catList.map(item=>{
+    const frac = item.amt/donutTotal;
+    const seg = `<circle r="${R}" cx="70" cy="70" fill="none" stroke="${CATS[item.c].color}" stroke-width="20"
+      stroke-dasharray="${(frac*C).toFixed(2)} ${(C-frac*C).toFixed(2)}"
+      stroke-dashoffset="${(-_acc*C).toFixed(2)}" transform="rotate(-90 70 70)"></circle>`;
+    _acc += frac;
+    return seg;
+  }).join('');
+
   let html = `
   <div class="page-head">
     <div>
@@ -792,6 +859,19 @@ function renderAnalisis(){
       <span class="cat-amt">${fmt(s.amt)}</span>
     </div>`).join('')}
   <div class="insight-line">Estimado recurrente: <b>${fmt(subs.reduce((a,s)=>a+s.amt,0))}</b> / mes aprox.</div>` : ''}
+
+  ${streak>0 ? `<div class="insight-line">🔥 Racha: <b>${streak} día${streak!==1?'s':''}</b> seguidos bajo el presupuesto diario.</div>` : ''}
+
+  <div class="section-title">Distribución por categoría</div>
+  <div class="donut-wrap">
+    <svg viewBox="0 0 140 140" class="donut">
+      ${donutSegs}
+      <circle r="42" cx="70" cy="70" fill="var(--card)"></circle>
+    </svg>
+    <div class="donut-legend">
+      ${catList.slice(0,6).map(item=>`<div class="donut-leg"><span class="dot" style="background:${CATS[item.c].color}"></span>${CATS[item.c].label} · ${Math.round(item.amt/donutTotal*100)}%</div>`).join('')}
+    </div>
+  </div>
 
   <div class="section-title">Categorías principales</div>
   ${catList.map(item=>{
