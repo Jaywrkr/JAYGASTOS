@@ -40,6 +40,23 @@ input,select{font-family:inherit;}
 .nav-btn{flex:1;text-align:center;padding:10px 6px;border:none;background:transparent;color:var(--text-dim);font-weight:800;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;border-radius:10px;transition:all .15s;}
 .nav-btn.active{background:var(--card2);color:var(--text);box-shadow:inset 0 0 0 1px var(--border2);}
 
+/* Barra superior segura para el notch del iPhone */
+.topbar{padding-top:env(safe-area-inset-top);}
+
+/* En móvil: navegación abajo tipo app */
+@media (max-width:640px){
+  .nav{position:fixed;top:auto;bottom:0;left:0;right:0;border-bottom:none;border-top:1px solid var(--border);padding:8px 12px calc(8px + env(safe-area-inset-bottom));gap:6px;}
+  .nav-btn{padding:8px 4px;font-size:10px;}
+  body{padding-bottom:calc(76px + env(safe-area-inset-bottom));}
+  /* subir los botones flotantes por encima del nav */
+  #lockToggle{bottom:calc(88px + env(safe-area-inset-bottom));}
+  #pushToggle{bottom:calc(140px + env(safe-area-inset-bottom));}
+  /* que los botones de acción no se desborden */
+  .page-head{flex-direction:column;align-items:stretch;}
+  .head-actions{flex-wrap:wrap;}
+  .head-actions .icon-btn{flex:1;justify-content:center;}
+}
+
 .wrap{max-width:760px;margin:0 auto;padding:18px 16px 0;}
 
 /* MONTH NAV */
@@ -208,7 +225,7 @@ input,select{font-family:inherit;}
   </div>
 </div>
 
-<div style="background:rgba(167,139,250,0.08);border-bottom:1px solid rgba(167,139,250,0.2);text-align:center;padding:6px 16px;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#A78BFA;">
+<div style="background:rgba(167,139,250,0.08);border-bottom:1px solid rgba(167,139,250,0.2);text-align:center;padding:calc(6px + env(safe-area-inset-top)) 16px 6px;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#A78BFA;">
   ↻ Última actualización: 13 jul 2026, 11:20
 </div>
 <div class="nav">
@@ -533,6 +550,9 @@ function renderGastos(){
   tx.forEach(t=>{ (groups[t.date] = groups[t.date]||[]).push(t); });
   const dates = Object.keys(groups).sort().reverse();
 
+  // seleccionar/deseleccionar todos (excluir del total)
+  const allExcluded = tx.length>0 && tx.every(t=>excluded.has(t.id));
+
   let html = `
   <div class="page-head">
     <div>
@@ -540,6 +560,7 @@ function renderGastos(){
       <div class="page-sub">${monthLabel(curMonth)} · día ${TODAY}/${DAYS_IN_MONTH}</div>
     </div>
     <div class="head-actions">
+      <button class="icon-btn" id="selAllBtn">${allExcluded?'☑ Marcar todos':'☐ Desmarcar todos'}</button>
       <button class="icon-btn" id="syncBtn"><span class="spin-ic">↻</span> Revisar correos</button>
       <button class="icon-btn" id="pngBtn">↓ PNG</button>
     </div>
@@ -619,6 +640,15 @@ function renderGastos(){
   document.getElementById('fCat').addEventListener('change', e=>{ filterCat=e.target.value; render(); });
   document.getElementById('fSearch').addEventListener('input', e=>{ filterSearch=e.target.value; render(); });
   document.getElementById('fAll').addEventListener('change', e=>{ searchAll=e.target.checked; render(); });
+  document.getElementById('selAllBtn').addEventListener('click', ()=>{
+    const ftx = filteredTx();
+    const allExc = ftx.length>0 && ftx.every(t=>excluded.has(t.id));
+    if(allExc) ftx.forEach(t=>excluded.delete(t.id));
+    else ftx.forEach(t=>excluded.add(t.id));
+    saveExcluded();
+    toast(allExc?'✓ Todos incluidos':'✓ Todos excluidos del total');
+    render();
+  });
   document.querySelectorAll('.tx-catsel').forEach(sel=>{
     sel.addEventListener('change', e=>{ setTxCategory(e.target.dataset.est, e.target.value); });
     sel.addEventListener('click', e=>e.stopPropagation());
